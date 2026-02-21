@@ -3,149 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MyMap — твоя карта</title>
+    <title>MyMap</title>
     <style>
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
-
         body {
-            background: #3a2c1f; /* тёмный фон вокруг */
+            background: black;
             min-height: 100vh;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        /* карта на весь экран */
+        .map-full {
+            flex: 1;
+            display: flex;
             align-items: center;
-            font-family: 'Courier New', Courier, monospace;
-            padding: 8px;
+            justify-content: center;
+            background: #111;
+            padding: 5px;
         }
-
-        .game {
-            max-width: 380px;
-            width: 100%;
-            background: #7d5e3f; /* бежево-коричневый фон контейнера */
-            border-radius: 24px;
-            padding: 20px 12px 24px;
-            box-shadow: 0 12px 0 #4f3a25;
-        }
-
-        /* карта — вертикальный формат */
-        .map-container {
-            background: #4f3a25;
-            padding: 10px;
-            border-radius: 28px;
-            margin-bottom: 20px;
-            box-shadow: inset 0 4px 0 #2f2319;
-        }
-
         canvas {
             display: block;
             width: 100%;
-            height: auto;
-            background: #dac29c; /* бежевый фон карты */
-            border-radius: 20px;
-            box-shadow: 0 6px 0 #3d2e1d;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            background: #222;
             image-rendering: crisp-edges;
         }
-
-        /* координаты — минимализм */
-        .pos {
-            display: flex;
-            justify-content: space-between;
-            background: #8b6e4b;
-            color: #f0dec0;
-            padding: 12px 18px;
-            border-radius: 40px;
+        /* минимум интерфейса */
+        .coords {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 1.3rem;
             font-weight: bold;
-            font-size: 1.4rem;
-            margin-bottom: 20px;
-            border: 2px solid #4f3a25;
-            box-shadow: inset 0 2px 5px #3e2e1b;
+            z-index: 10;
         }
-
-        .pos span {
-            background: #2f2319;
-            padding: 6px 20px;
-            border-radius: 40px;
-            color: #ecd8b4;
+        .coords span {
+            color: #ffd966;
+            margin-left: 8px;
         }
-
-        /* кнопки управления — огромные, чётко кликаются */
-        .arrows {
+        /* кнопки управления — большие, в самом низу */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 8px;
+            z-index: 20;
+            padding: 0 10px;
         }
-
-        .row {
+        .btn-row {
             display: flex;
-            gap: 18px;
+            gap: 20px;
             justify-content: center;
         }
-
-        .ctrl-btn {
-            background: #b48c5c; /* бежево-коричневая */
-            border: none;
-            color: #2f2319;
-            font-size: 3.4rem;
-            font-weight: bold;
+        .move-btn {
+            background: #333;
+            border: 2px solid #666;
+            color: white;
+            font-size: 3.5rem;
             width: 100px;
             height: 100px;
-            border-radius: 40px;
-            box-shadow: 0 8px 0 #5d412b, 0 8px 15px rgba(0,0,0,0.5);
+            border-radius: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             touch-action: manipulation;
-            transition: all 0.06s;
-            line-height: 1;
-            border: 2px solid #3d2e1b;
+            box-shadow: 0 5px 0 #1a1a1a;
+            transition: 0.05s;
         }
-
-        .ctrl-btn:active {
-            transform: translateY(8px);
-            box-shadow: 0 2px 0 #5d412b;
+        .move-btn:active {
+            transform: translateY(5px);
+            box-shadow: none;
         }
-
-        /* кнопка новой карты */
-        .new-map {
-            background: #5d412b;
-            border: none;
-            color: #f7e9d2;
-            font-size: 1.6rem;
-            font-weight: bold;
-            padding: 16px 28px;
-            border-radius: 60px;
-            box-shadow: 0 7px 0 #342216;
-            margin: 16px auto 8px;
-            width: fit-content;
+        #newMapBtn {
+            background: #333;
+            border: 2px solid #666;
+            color: white;
+            font-size: 2rem;
+            padding: 15px 30px;
+            border-radius: 40px;
+            margin-top: 10px;
             cursor: pointer;
             touch-action: manipulation;
-            border: 2px solid #8b6e4b;
-            transition: all 0.06s;
         }
-
-        .new-map:active {
-            transform: translateY(6px);
-            box-shadow: 0 1px 0 #342216;
-        }
-
-        .footer {
-            text-align: center;
-            color: #ecd8b4;
-            font-size: 0.9rem;
-            margin-top: 12px;
-        }
-
-        /* мобильная адаптация */
-        @media (max-width: 400px) {
-            .ctrl-btn {
+        @media (max-width: 500px) {
+            .move-btn {
                 width: 85px;
                 height: 85px;
                 font-size: 3rem;
@@ -154,209 +113,210 @@
     </style>
 </head>
 <body>
-<div class="game">
-    <div class="pos">
-        <span>🗺️ X</span> <span id="xVal">0</span> <span style="margin-left: 10px;">Y</span> <span id="yVal">0</span>
+    <div class="coords">
+        X: <span id="xC">0</span> Y: <span id="yC">0</span>
     </div>
 
-    <div class="map-container">
-        <canvas id="mapCanvas" width="400" height="600"></canvas>
+    <div class="map-full">
+        <canvas id="gameCanvas"></canvas>
     </div>
 
-    <div class="arrows">
-        <div class="row">
-            <button class="ctrl-btn" id="goUp" aria-label="вверх">⬆️</button>
+    <div class="controls">
+        <div class="btn-row">
+            <button class="move-btn" id="upBtn">⬆️</button>
         </div>
-        <div class="row">
-            <button class="ctrl-btn" id="goLeft" aria-label="влево">⬅️</button>
-            <button class="ctrl-btn" id="goDown" aria-label="вниз">⬇️</button>
-            <button class="ctrl-btn" id="goRight" aria-label="вправо">➡️</button>
+        <div class="btn-row">
+            <button class="move-btn" id="leftBtn">⬅️</button>
+            <button class="move-btn" id="downBtn">⬇️</button>
+            <button class="move-btn" id="rightBtn">➡️</button>
         </div>
+        <button id="newMapBtn">🔄 новая карта</button>
     </div>
 
-    <div style="display: flex; justify-content: center;">
-        <button class="new-map" id="generateBtn">🔄 новая</button>
-    </div>
-    <div class="footer">MyMap · шаг 1 · стены</div>
-</div>
+    <script>
+        (function() {
+            // ====== размеры ======
+            const SIZE = 100; // сетка 100x100
+            let canvas = document.getElementById('gameCanvas');
+            let ctx = canvas.context;
 
-<script>
-    (function() {
-        // ---------- размеры ----------
-        const SIZE = 100;               // поле 100x100
-        const CANVAS_W = 400;
-        const CANVAS_H = 600;
-        const CELL_SIZE = 4;            // 400/100 = 4 (ширина ячейки)
-        // но так как высота canvas 600, рисуем квадраты 4x6? нет — сохраним пропорции: ширина 4, высота 4 (пиксели квадратные)
-        // просто отцентрируем карту по вертикали (сверху и снизу будут поля)
-        const Y_OFFSET = (CANVAS_H - SIZE * CELL_SIZE) / 2; // (600 - 400)/2 = 100px сверху/снизу
+            // элементы координат
+            let xDisplay = document.getElementById('xC');
+            let yDisplay = document.getElementById('yC');
 
-        const canvas = document.getElementById('mapCanvas');
-        const ctx = canvas.getContext('2d');
+            // игрок и стены
+            let player = { x: 50, y: 50 };
+            let walls = [];
 
-        const xSpan = document.getElementById('xVal');
-        const ySpan = document.getElementById('yVal');
-
-        // игрок и стены
-        let player = { x: 50, y: 50 };
-        let walls = [];
-
-        // ---------- генерация карты (стены + позиция) ----------
-        function generateMap() {
-            const newWalls = [];
-            const wallCount = 1400 + Math.floor(Math.random() * 400); // ~1500-1800 стен
-
-            for (let i = 0; i < wallCount; i++) {
-                newWalls.push({
-                    x: Math.floor(Math.random() * SIZE),
-                    y: Math.floor(Math.random() * SIZE)
-                });
+            // ====== подгон canvas под размер экрана ======
+            function resizeCanvas() {
+                let container = document.querySelector('.map-full');
+                let w = container.clientWidth;
+                let h = container.clientHeight;
+                canvas.width = w;
+                canvas.height = h;
+                draw(); // перерисовать после изменения размера
             }
 
-            // случайный старт (не стена)
-            let startX, startY;
-            do {
-                startX = Math.floor(Math.random() * SIZE);
-                startY = Math.floor(Math.random() * SIZE);
-            } while (newWalls.some(w => w.x === startX && w.y === startY));
+            // ====== генерация стен ======
+            function generateMap() {
+                let newWalls = [];
+                let count = 1500 + Math.floor(Math.random() * 500); // ~1500-2000 стен
 
-            player.x = startX;
-            player.y = startY;
+                for (let i = 0; i < count; i++) {
+                    newWalls.push({
+                        x: Math.floor(Math.random() * SIZE),
+                        y: Math.floor(Math.random() * SIZE)
+                    });
+                }
 
-            // удаляем дубликаты и убираем стены на клетке игрока
-            const unique = new Map(); // используем Map для быстрого удаления дублей
-            for (const w of newWalls) {
-                if (w.x === player.x && w.y === player.y) continue; // не ставим стену на игрока
-                unique.set(`${w.x},${w.y}`, { x: w.x, y: w.y });
+                // случайный старт (не в стене)
+                let startX, startY;
+                do {
+                    startX = Math.floor(Math.random() * SIZE);
+                    startY = Math.floor(Math.random() * SIZE);
+                } while (newWalls.some(w => w.x === startX && w.y === startY));
+
+                player.x = startX;
+                player.y = startY;
+
+                // убираем дубликаты и стены на клетке игрока
+                let unique = new Map();
+                for (let w of newWalls) {
+                    if (w.x === player.x && w.y === player.y) continue;
+                    unique.set(w.x + ',' + w.y, { x: w.x, y: w.y });
+                }
+                walls = Array.from(unique.values());
             }
-            walls = Array.from(unique.values());
-        }
 
-        // проверка стены
-        function isWall(x, y) {
-            // быстрая проверка через some, но walls.length ~1700 — норм
-            return walls.some(w => w.x === x && w.y === y);
-        }
+            // ====== проверка стены ======
+            function isWall(x, y) {
+                for (let i = 0; i < walls.length; i++) {
+                    if (walls[i].x === x && walls[i].y === y) return true;
+                }
+                return false;
+            }
 
-        // движение
-        function tryMove(dx, dy) {
-            const nx = player.x + dx;
-            const ny = player.y + dy;
-            if (nx < 0 || nx >= SIZE || ny < 0 || ny >= SIZE) return false;
-            if (isWall(nx, ny)) return false;
-            player.x = nx;
-            player.y = ny;
-            return true;
-        }
+            // ====== движение ======
+            function tryMove(dx, dy) {
+                let nx = player.x + dx;
+                let ny = player.y + dy;
+                if (nx < 0 || nx >= SIZE || ny < 0 || ny >= SIZE) return false;
+                if (isWall(nx, ny)) return false;
+                player.x = nx;
+                player.y = ny;
+                return true;
+            }
 
-        // отрисовка (бежево-коричнево-черная гамма)
-        function draw() {
-            ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+            // ====== отрисовка (минимум, только суть) ======
+            function draw() {
+                if (!canvas || !ctx) return;
 
-            // фон карты (бежевый)
-            ctx.fillStyle = '#dac29c';
-            ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+                let w = canvas.width;
+                let h = canvas.height;
 
-            // стены — тёмно-коричневые (почти чёрные)
-            ctx.fillStyle = '#3a2c1f';
-            for (const w of walls) {
-                ctx.fillRect(
-                    w.x * CELL_SIZE,
-                    Y_OFFSET + w.y * CELL_SIZE,
-                    CELL_SIZE - 0.3,  // чуть меньше для зазора
-                    CELL_SIZE - 0.3
+                // заливка фона (тёмно-серый)
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, 0, w, h);
+
+                // размер клетки, чтобы поле 100x100 влезло в экран
+                let cellSize = Math.min(w, h) / SIZE;
+
+                // смещение, чтобы отцентровать сетку
+                let offsetX = (w - cellSize * SIZE) / 2;
+                let offsetY = (h - cellSize * SIZE) / 2;
+
+                // рисуем стены (чёрные квадраты)
+                ctx.fillStyle = '#333';
+                for (let i = 0; i < walls.length; i++) {
+                    let wx = walls[i].x;
+                    let wy = walls[i].y;
+                    ctx.fillRect(
+                        offsetX + wx * cellSize,
+                        offsetY + wy * cellSize,
+                        cellSize * 0.95, // чуть меньше для зазора
+                        cellSize * 0.95
+                    );
+                }
+
+                // рисуем игрока (крупный светлый круг)
+                ctx.fillStyle = '#f0f0f0';
+                ctx.shadowColor = '#aaa';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(
+                    offsetX + player.x * cellSize + cellSize/2,
+                    offsetY + player.y * cellSize + cellSize/2,
+                    cellSize * 0.4, // крупный
+                    0, 2 * Math.PI
                 );
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // координаты
+                xDisplay.textContent = player.x;
+                yDisplay.textContent = player.y;
             }
 
-            // игрок — крупный оранжево-бежевый мячик
-            ctx.fillStyle = '#e3b17b';
-            ctx.shadowColor = '#8b5a2b';
-            ctx.shadowBlur = 8;
-            ctx.beginPath();
-            ctx.arc(
-                player.x * CELL_SIZE + CELL_SIZE/2,
-                Y_OFFSET + player.y * CELL_SIZE + CELL_SIZE/2,
-                CELL_SIZE/1.6,  // крупнее (вместо /2 делаем /1.6)
-                0, 2 * Math.PI
-            );
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.shadowColor = 'transparent';
+            // ====== обработчики движения ======
+            function moveUp() { tryMove(0, -1); draw(); }
+            function moveDown() { tryMove(0, 1); draw(); }
+            function moveLeft() { tryMove(-1, 0); draw(); }
+            function moveRight() { tryMove(1, 0); draw(); }
+            function newMap() { generateMap(); draw(); }
 
-            // лёгкая сетка (почти незаметна)
-            ctx.strokeStyle = '#b48c5c';
-            ctx.lineWidth = 0.3;
-            for (let i = 0; i <= SIZE; i++) {
-                ctx.beginPath();
-                ctx.moveTo(i * CELL_SIZE, Y_OFFSET);
-                ctx.lineTo(i * CELL_SIZE, Y_OFFSET + SIZE * CELL_SIZE);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, Y_OFFSET + i * CELL_SIZE);
-                ctx.lineTo(SIZE * CELL_SIZE, Y_OFFSET + i * CELL_SIZE);
-                ctx.stroke();
-            }
+            // ====== навешиваем события ======
+            document.getElementById('upBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                moveUp();
+            });
+            document.getElementById('downBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                moveDown();
+            });
+            document.getElementById('leftBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                moveLeft();
+            });
+            document.getElementById('rightBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                moveRight();
+            });
+            document.getElementById('newMapBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                newMap();
+            });
 
-            // координаты
-            xSpan.textContent = player.x;
-            ySpan.textContent = player.y;
-        }
+            // тач-события чтобы не скроллилось
+            let btns = document.querySelectorAll('button');
+            btns.forEach(btn => {
+                btn.addEventListener('touchstart', (e) => e.preventDefault());
+            });
 
-        // действие + перерисовка
-        function moveAndDraw(dx, dy) {
-            tryMove(dx, dy);
-            draw();
-        }
+            // клавиатура
+            window.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                switch(e.key) {
+                    case 'ArrowUp': e.preventDefault(); moveUp(); break;
+                    case 'ArrowDown': e.preventDefault(); moveDown(); break;
+                    case 'ArrowLeft': e.preventDefault(); moveLeft(); break;
+                    case 'ArrowRight': e.preventDefault(); moveRight(); break;
+                }
+            });
 
-        // новая карта
-        function newMap() {
+            // ресайз окна
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+            });
+
+            // старт
             generateMap();
-            draw();
-        }
-
-        // ---------- ПОДПИСКА НА КНОПКИ (рабочие) ----------
-        document.getElementById('goUp').addEventListener('click', function(e) {
-            e.preventDefault();
-            moveAndDraw(0, -1);
-        });
-        document.getElementById('goDown').addEventListener('click', function(e) {
-            e.preventDefault();
-            moveAndDraw(0, 1);
-        });
-        document.getElementById('goLeft').addEventListener('click', function(e) {
-            e.preventDefault();
-            moveAndDraw(-1, 0);
-        });
-        document.getElementById('goRight').addEventListener('click', function(e) {
-            e.preventDefault();
-            moveAndDraw(1, 0);
-        });
-        document.getElementById('generateBtn').addEventListener('click', function(e) {
-            e.preventDefault();
-            newMap();
-        });
-
-        // мобильный touchstart чтобы не скроллило
-        const allBtns = document.querySelectorAll('button');
-        allBtns.forEach(btn => {
-            btn.addEventListener('touchstart', (e) => e.preventDefault());
-        });
-
-        // клавиатура (дополнительно)
-        window.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT') return;
-            switch(e.key) {
-                case 'ArrowUp': e.preventDefault(); moveAndDraw(0, -1); break;
-                case 'ArrowDown': e.preventDefault(); moveAndDraw(0, 1); break;
-                case 'ArrowLeft': e.preventDefault(); moveAndDraw(-1, 0); break;
-                case 'ArrowRight': e.preventDefault(); moveAndDraw(1, 0); break;
-            }
-        });
-
-        // старт
-        generateMap();
-        draw();
-    })();
-</script>
+            // нужен context после установки размера
+            setTimeout(() => {
+                ctx = canvas.getContext('2d');
+                resizeCanvas();
+            }, 10);
+        })();
+    </script>
 </body>
 </html>
