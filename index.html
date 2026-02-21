@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Лабиринт: 100 шагов</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #1a2a32;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 8px;
+        }
+        .game-container {
+            background: #0f1a1f;
+            border-radius: 28px;
+            padding: 20px 16px 24px;
+            box-shadow: 0 10px 0 #0b1318;
+            max-width: 500px;
+            width: 100%;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            color: #bcd4de;
+            background: #1f2e38;
+            padding: 10px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 18px;
+            box-shadow: inset 0 2px 3px #0d181e;
+        }
+        .coord span {
+            color: #f4e9be;
+            background: #0b171f;
+            padding: 4px 10px;
+            border-radius: 24px;
+            margin-left: 6px;
+        }
+        .canvas-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 18px;
+            background: #17242b;
+            padding: 12px;
+            border-radius: 36px;
+            box-shadow: inset 0 0 0 2px #263b45;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 400px;
+            aspect-ratio: 1/1;
+            background: #1e2f38;
+            border-radius: 24px;
+            box-shadow: 0 6px 0 #0c171e;
+            image-rendering: crisp-edges; /* для чётких квадратов */
+        }
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .row {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .btn {
+            background: #314b58;
+            border: none;
+            color: white;
+            font-size: 2.8rem;
+            font-weight: bold;
+            width: 90px;
+            height: 90px;
+            border-radius: 40px;
+            box-shadow: 0 7px 0 #1b2c35, 0 10px 15px rgba(0,0,0,0.4);
+            transition: all 0.04s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
+            line-height: 1;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #1b2c35;
+        }
+        @media (max-width: 450px) {
+            .btn {
+                width: 75px;
+                height: 75px;
+                font-size: 2.4rem;
+                border-radius: 35px;
+            }
+        }
+        .new-map-btn {
+            background: #3f5e6b;
+            color: white;
+            border: none;
+            font-size: 1.3rem;
+            font-weight: 600;
+            padding: 16px 24px;
+            border-radius: 50px;
+            box-shadow: 0 6px 0 #22323d;
+            margin-top: 18px;
+            width: fit-content;
+            cursor: pointer;
+            transition: all 0.06s;
+            letter-spacing: 0.5px;
+            touch-action: manipulation;
+        }
+        .new-map-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #22323d;
+        }
+        .footer-note {
+            color: #5f7e8b;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="stats">
+        <div class="coord">📌 X: <span id="xCoord">0</span></div>
+        <div class="coord">📌 Y: <span id="yCoord">0</span></div>
+    </div>
+
+    <div class="canvas-wrapper">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <div class="control-panel">
+        <div class="row">
+            <button class="btn" id="moveUp" aria-label="вверх">⬆️</button>
+        </div>
+        <div class="row">
+            <button class="btn" id="moveLeft" aria-label="влево">⬅️</button>
+            <button class="btn" id="moveDown" aria-label="вниз">⬇️</button>
+            <button class="btn" id="moveRight" aria-label="вправо">➡️</button>
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: center;">
+        <button class="new-map-btn" id="newMapBtn">🔄 новая карта</button>
+    </div>
+    <div class="footer-note">⚡ шаг = 1 | стены не пускают</div>
+</div>
+
+<script>
+    (function() {
+        // ----- размеры -----
+        const SIZE = 100;            // поле 100x100
+        const CELL_SIZE = 4;          // 400 / 100 = 4 пикселя на клетку
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // элементы координат
+        const xSpan = document.getElementById('xCoord');
+        const ySpan = document.getElementById('yCoord');
+
+        // --- игрок и карта ---
+        let player = { x: 50, y: 50 };   // временно, потом перезапишем random
+        let walls = [];                   // массив стен: каждый элемент {x, y}
+
+        // ---- генерация случайной карты (гарантируем проходимость стартовой позиции) ----
+        function generateMap() {
+            // 1. создаём пустой массив стен
+            const newWalls = [];
+
+            // 2. генерируем ~1500 стен (примерно 15% от 10000 клеток)
+            const wallCount = 1400 + Math.floor(Math.random() * 300); // 1400..1700
+
+            for (let i = 0; i < wallCount; i++) {
+                const wx = Math.floor(Math.random() * SIZE);
+                const wy = Math.floor(Math.random() * SIZE);
+                // проверка на дубликат не делаем ради скорости — редкие повторы допустимы (стена и есть стена)
+                newWalls.push({ x: wx, y: wy });
+            }
+
+            // 3. случайная стартовая позиция игрока
+            let startX, startY;
+            do {
+                startX = Math.floor(Math.random() * SIZE);
+                startY = Math.floor(Math.random() * SIZE);
+                // убедимся что стартовая клетка не стена
+            } while (newWalls.some(w => w.x === startX && w.y === startY));
+
+            player.x = startX;
+            player.y = startY;
+
+            // 4. сохраняем стены (оптимизация: убираем дубликаты, если вдруг)
+            // проще всего через Set (для надёжности)
+            const uniqueWalls = [];
+            const seen = new Set();
+            for (const w of newWalls) {
+                const key = `${w.x},${w.y}`;
+                if (!seen.has(key) && !(w.x === player.x && w.y === player.y)) { // исключаем стартовую клетку из стен
+                    seen.add(key);
+                    uniqueWalls.push({ x: w.x, y: w.y });
+                }
+            }
+            walls = uniqueWalls;
+        }
+
+        // --- проверка, занята ли клетка стеной ---
+        function isWall(x, y) {
+            // быстрая проверка через some (для 1500-2000 стен ок)
+            return walls.some(w => w.x === x && w.y === y);
+        }
+
+        // --- движение с проверкой ---
+        function tryMove(dx, dy) {
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+
+            // границы
+            if (newX < 0 || newX >= SIZE || newY < 0 || newY >= SIZE) {
+                return false; // за край нельзя
+            }
+
+            // стена?
+            if (isWall(newX, newY)) {
+                return false;
+            }
+
+            // двигаем
+            player.x = newX;
+            player.y = newY;
+            return true;
+        }
+
+        // --- отрисовка (минимализм, без лагов) ---
+        function draw() {
+            ctx.clearRect(0, 0, 400, 400);
+
+            // фон (проходимые клетки)
+            ctx.fillStyle = '#2d4a56';
+            ctx.fillRect(0, 0, 400, 400);
+
+            // рисуем стены — тёмно-серые кирпичи
+            ctx.fillStyle = '#1d2c35';
+            for (const w of walls) {
+                ctx.fillRect(w.x * CELL_SIZE, w.y * CELL_SIZE, CELL_SIZE-0.5, CELL_SIZE-0.5); // небольшой зазор для читаемости
+            }
+
+            // игрок — яркий, оранжевый
+            ctx.fillStyle = '#f5b17b';
+            ctx.shadowColor = '#e08e4b';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(
+                player.x * CELL_SIZE + CELL_SIZE/2,
+                player.y * CELL_SIZE + CELL_SIZE/2,
+                CELL_SIZE/2 - 0.5, 0, 2 * Math.PI
+            );
+            ctx.fill();
+            ctx.shadowBlur = 0; // сброс тени
+
+            // небольшая сетка для ориентира (опционально, почти незаметна)
+            ctx.strokeStyle = '#355763';
+            ctx.lineWidth = 0.3;
+            for (let i = 0; i <= SIZE; i++) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#2a414d';
+                ctx.lineWidth = 0.3;
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, 400);
+                ctx.stroke();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(400, i * CELL_SIZE);
+                ctx.stroke();
+            }
+
+            // обновляем цифры координат
+            xSpan.textContent = player.x;
+            ySpan.textContent = player.y;
+        }
+
+        // --- обновить после движения ---
+        function moveAndDraw(dx, dy) {
+            tryMove(dx, dy);
+            draw();
+        }
+
+        // --- генерация и перерисовка ---
+        function regenerateAndDraw() {
+            generateMap();
+            draw();
+        }
+
+        // --- привязка кнопок (тач и мышь) ---
+        document.getElementById('moveUp').addEventListener('click', (e) => {
+            e.preventDefault();
+            moveAndDraw(0, -1);
+        });
+        document.getElementById('moveDown').addEventListener('click', (e) => {
+            e.preventDefault();
+            moveAndDraw(0, 1);
+        });
+        document.getElementById('moveLeft').addEventListener('click', (e) => {
+            e.preventDefault();
+            moveAndDraw(-1, 0);
+        });
+        document.getElementById('moveRight').addEventListener('click', (e) => {
+            e.preventDefault();
+            moveAndDraw(1, 0);
+        });
+
+        document.getElementById('newMapBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            regenerateAndDraw();
+        });
+
+        // ---- запрет скролла при таче на кнопках (для мобильных) ----
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+            });
+        });
+
+        // ---- старт ----
+        generateMap();   // случайный игрок и стены
+        draw();
+
+        // дополнительно: клавиши клавиатуры (для удобства)
+        window.addEventListener('keydown', (e) => {
+            // только если не ввод в поле (у нас полей нет, но на всякий)
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            switch (e.key) {
+                case 'ArrowUp': e.preventDefault(); moveAndDraw(0, -1); break;
+                case 'ArrowDown': e.preventDefault(); moveAndDraw(0, 1); break;
+                case 'ArrowLeft': e.preventDefault(); moveAndDraw(-1, 0); break;
+                case 'ArrowRight': e.preventDefault(); moveAndDraw(1, 0); break;
+                default:;
+            }
+        });
+    })();
+</script>
+</body>
+</html>
