@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MyMap</title>
+    <title>MyMap — просто карта</title>
     <style>
         * {
             margin: 0;
@@ -17,66 +17,64 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            font-family: system-ui, -apple-system, sans-serif;
         }
-        /* карта на весь экран */
-        .map-full {
+        /* карта занимает ВСЁ пространство */
+        .map-area {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #111;
-            padding: 5px;
+            background: black;
         }
         canvas {
             display: block;
             width: 100%;
             height: 100%;
-            max-width: 100vw;
-            max-height: 100vh;
-            background: #222;
-            image-rendering: crisp-edges;
+            background: #111;
         }
-        /* минимум интерфейса */
-        .coords {
+        /* координаты мелко в углу */
+        .pos {
             position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 8px 16px;
+            top: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.6);
+            color: #ccc;
+            padding: 6px 14px;
             border-radius: 30px;
-            font-size: 1.3rem;
-            font-weight: bold;
+            font-size: 1.2rem;
+            font-family: monospace;
             z-index: 10;
+            border: 1px solid #444;
         }
-        .coords span {
-            color: #ffd966;
-            margin-left: 8px;
+        .pos span {
+            color: white;
+            font-weight: bold;
+            margin: 0 4px;
         }
-        /* кнопки управления — большие, в самом низу */
-        .controls {
+        /* кнопки — большие, без эмодзи, только текст */
+        .buttons {
             position: fixed;
-            bottom: 20px;
+            bottom: 25px;
             left: 0;
             right: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
             z-index: 20;
-            padding: 0 10px;
+            padding: 0 15px;
         }
-        .btn-row {
+        .row {
             display: flex;
-            gap: 20px;
+            gap: 25px;
             justify-content: center;
         }
-        .move-btn {
-            background: #333;
-            border: 2px solid #666;
+        .action-btn {
+            background: #222;
+            border: 2px solid #555;
             color: white;
-            font-size: 3.5rem;
+            font-size: 2.2rem;
+            font-weight: bold;
             width: 100px;
             height: 100px;
             border-radius: 30px;
@@ -85,111 +83,126 @@
             justify-content: center;
             cursor: pointer;
             touch-action: manipulation;
-            box-shadow: 0 5px 0 #1a1a1a;
-            transition: 0.05s;
+            box-shadow: 0 6px 0 #111;
+            transition: 0.04s;
+            font-family: Arial, Helvetica, sans-serif;
         }
-        .move-btn:active {
-            transform: translateY(5px);
+        .action-btn:active {
+            transform: translateY(6px);
             box-shadow: none;
         }
         #newMapBtn {
-            background: #333;
-            border: 2px solid #666;
+            background: #222;
+            border: 2px solid #555;
             color: white;
-            font-size: 2rem;
-            padding: 15px 30px;
-            border-radius: 40px;
-            margin-top: 10px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            padding: 16px 35px;
+            border-radius: 50px;
             cursor: pointer;
             touch-action: manipulation;
+            box-shadow: 0 6px 0 #111;
+            transition: 0.04s;
+            letter-spacing: 1px;
         }
+        #newMapBtn:active {
+            transform: translateY(6px);
+            box-shadow: none;
+        }
+        /* телефоны */
         @media (max-width: 500px) {
-            .move-btn {
+            .action-btn {
                 width: 85px;
                 height: 85px;
-                font-size: 3rem;
+                font-size: 1.8rem;
+            }
+            #newMapBtn {
+                font-size: 1.5rem;
+                padding: 14px 30px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="coords">
-        X: <span id="xC">0</span> Y: <span id="yC">0</span>
-    </div>
+    <div class="pos">X:<span id="xCoord">0</span> Y:<span id="yCoord">0</span></div>
 
-    <div class="map-full">
+    <div class="map-area">
         <canvas id="gameCanvas"></canvas>
     </div>
 
-    <div class="controls">
-        <div class="btn-row">
-            <button class="move-btn" id="upBtn">⬆️</button>
+    <div class="buttons">
+        <div class="row">
+            <button class="action-btn" id="upBtn">ВВ</button>
         </div>
-        <div class="btn-row">
-            <button class="move-btn" id="leftBtn">⬅️</button>
-            <button class="move-btn" id="downBtn">⬇️</button>
-            <button class="move-btn" id="rightBtn">➡️</button>
+        <div class="row">
+            <button class="action-btn" id="leftBtn">ЛЕВ</button>
+            <button class="action-btn" id="downBtn">НИЗ</button>
+            <button class="action-btn" id="rightBtn">ПРАВ</button>
         </div>
-        <button id="newMapBtn">🔄 новая карта</button>
+        <button id="newMapBtn">▶ НОВАЯ КАРТА</button>
     </div>
 
     <script>
         (function() {
-            // ====== размеры ======
-            const SIZE = 100; // сетка 100x100
+            // ========== размеры ==========
+            const SIZE = 100;                 // поле 100x100 (координаты)
+            const MAX_WALLS = 10;              // максимум 10 стен
+
             let canvas = document.getElementById('gameCanvas');
-            let ctx = canvas.context;
+            let ctx = null;
 
-            // элементы координат
-            let xDisplay = document.getElementById('xC');
-            let yDisplay = document.getElementById('yC');
-
-            // игрок и стены
             let player = { x: 50, y: 50 };
             let walls = [];
 
-            // ====== подгон canvas под размер экрана ======
-            function resizeCanvas() {
-                let container = document.querySelector('.map-full');
-                let w = container.clientWidth;
-                let h = container.clientHeight;
-                canvas.width = w;
-                canvas.height = h;
-                draw(); // перерисовать после изменения размера
-            }
+            let xSpan = document.getElementById('xCoord');
+            let ySpan = document.getElementById('yCoord');
 
-            // ====== генерация стен ======
+            // ========== генерация карты (от 3 до 10 стен) ==========
             function generateMap() {
-                let newWalls = [];
-                let count = 1500 + Math.floor(Math.random() * 500); // ~1500-2000 стен
+                // случайное количество стен от 3 до 10
+                let wallCount = Math.floor(Math.random() * 8) + 3; // 3..10
 
-                for (let i = 0; i < count; i++) {
-                    newWalls.push({
+                let rawWalls = [];
+                for (let i = 0; i < wallCount; i++) {
+                    rawWalls.push({
                         x: Math.floor(Math.random() * SIZE),
                         y: Math.floor(Math.random() * SIZE)
                     });
                 }
 
-                // случайный старт (не в стене)
+                // случайный игрок (не на стене)
                 let startX, startY;
                 do {
                     startX = Math.floor(Math.random() * SIZE);
                     startY = Math.floor(Math.random() * SIZE);
-                } while (newWalls.some(w => w.x === startX && w.y === startY));
+                } while (rawWalls.some(w => w.x === startX && w.y === startY));
 
                 player.x = startX;
                 player.y = startY;
 
-                // убираем дубликаты и стены на клетке игрока
+                // убираем стены на клетке игрока и дубликаты
                 let unique = new Map();
-                for (let w of newWalls) {
+                for (let w of rawWalls) {
                     if (w.x === player.x && w.y === player.y) continue;
                     unique.set(w.x + ',' + w.y, { x: w.x, y: w.y });
                 }
                 walls = Array.from(unique.values());
+
+                // если вдруг стало меньше 3 стен — добавим случайные (но без дублей и не на игроке)
+                while (walls.length < 3) {
+                    let tryX = Math.floor(Math.random() * SIZE);
+                    let tryY = Math.floor(Math.random() * SIZE);
+                    if (tryX === player.x && tryY === player.y) continue;
+                    if (!walls.some(w => w.x === tryX && w.y === tryY)) {
+                        walls.push({ x: tryX, y: tryY });
+                    }
+                }
+
+                // обрезаем до 10 если вдруг больше
+                if (walls.length > 10) walls = walls.slice(0, 10);
             }
 
-            // ====== проверка стены ======
+            // ========== проверка стены ==========
             function isWall(x, y) {
                 for (let i = 0; i < walls.length; i++) {
                     if (walls[i].x === x && walls[i].y === y) return true;
@@ -197,7 +210,7 @@
                 return false;
             }
 
-            // ====== движение ======
+            // ========== движение ==========
             function tryMove(dx, dy) {
                 let nx = player.x + dx;
                 let ny = player.y + dy;
@@ -208,25 +221,25 @@
                 return true;
             }
 
-            // ====== отрисовка (минимум, только суть) ======
+            // ========== отрисовка ==========
             function draw() {
                 if (!canvas || !ctx) return;
 
                 let w = canvas.width;
                 let h = canvas.height;
 
-                // заливка фона (тёмно-серый)
-                ctx.fillStyle = '#1a1a1a';
+                // чёрный фон
+                ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, w, h);
 
-                // размер клетки, чтобы поле 100x100 влезло в экран
+                // размер клетки: поле 100x100 должно влезть целиком
                 let cellSize = Math.min(w, h) / SIZE;
 
-                // смещение, чтобы отцентровать сетку
+                // центрируем сетку
                 let offsetX = (w - cellSize * SIZE) / 2;
                 let offsetY = (h - cellSize * SIZE) / 2;
 
-                // рисуем стены (чёрные квадраты)
+                // рисуем стены — тёмно-серые квадраты
                 ctx.fillStyle = '#333';
                 for (let i = 0; i < walls.length; i++) {
                     let wx = walls[i].x;
@@ -234,38 +247,46 @@
                     ctx.fillRect(
                         offsetX + wx * cellSize,
                         offsetY + wy * cellSize,
-                        cellSize * 0.95, // чуть меньше для зазора
-                        cellSize * 0.95
+                        cellSize * 0.9,
+                        cellSize * 0.9
                     );
                 }
 
-                // рисуем игрока (крупный светлый круг)
-                ctx.fillStyle = '#f0f0f0';
+                // рисуем ИГРОКА — огромный белый круг (занимает почти всю клетку)
+                ctx.fillStyle = '#fff';
                 ctx.shadowColor = '#aaa';
-                ctx.shadowBlur = 10;
+                ctx.shadowBlur = 15;
                 ctx.beginPath();
                 ctx.arc(
                     offsetX + player.x * cellSize + cellSize/2,
                     offsetY + player.y * cellSize + cellSize/2,
-                    cellSize * 0.4, // крупный
+                    cellSize * 0.45, // почти во всю клетку
                     0, 2 * Math.PI
                 );
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
-                // координаты
-                xDisplay.textContent = player.x;
-                yDisplay.textContent = player.y;
+                // показать координаты
+                xSpan.textContent = player.x;
+                ySpan.textContent = player.y;
             }
 
-            // ====== обработчики движения ======
+            // ========== обновление размера canvas ==========
+            function resizeCanvas() {
+                let container = document.querySelector('.map-area');
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+                draw();
+            }
+
+            // ========== обработчики ==========
             function moveUp() { tryMove(0, -1); draw(); }
             function moveDown() { tryMove(0, 1); draw(); }
             function moveLeft() { tryMove(-1, 0); draw(); }
             function moveRight() { tryMove(1, 0); draw(); }
             function newMap() { generateMap(); draw(); }
 
-            // ====== навешиваем события ======
+            // ====== навешиваем события (без эмодзи, чистый текст) ======
             document.getElementById('upBtn').addEventListener('click', (e) => {
                 e.preventDefault();
                 moveUp();
@@ -287,7 +308,7 @@
                 newMap();
             });
 
-            // тач-события чтобы не скроллилось
+            // тач-блокировка скролла
             let btns = document.querySelectorAll('button');
             btns.forEach(btn => {
                 btn.addEventListener('touchstart', (e) => e.preventDefault());
@@ -311,11 +332,10 @@
 
             // старт
             generateMap();
-            // нужен context после установки размера
             setTimeout(() => {
                 ctx = canvas.getContext('2d');
                 resizeCanvas();
-            }, 10);
+            }, 20);
         })();
     </script>
 </body>
