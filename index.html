@@ -109,14 +109,13 @@
             box-shadow: 0 3px 0 #1a2a1a;
         }
         
-        /* Новые стили для ссылки */
+        /* Контейнер для ссылки - теперь над координатами */
         .room-link-container {
-            margin-top: 20px;
-            padding: 20px;
+            margin: 10px 0;
+            padding: 15px;
             background: #1a2a1a;
             border-radius: 30px;
             border: 3px solid #7cb57c;
-            display: none;
         }
         .room-link-label {
             text-align: center;
@@ -128,7 +127,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         .room-link-input {
             flex: 1;
@@ -180,14 +179,21 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 5px;
+            gap: 10px;
             margin-bottom: 12px;
+        }
+        .coords {
+            color: #d0e0d0;
+            font-family: monospace;
+            font-size: 18px;
+            text-align: center;
+            text-shadow: 2px 2px 0 #1a2a1a;
+            letter-spacing: 2px;
         }
         .header-buttons {
             display: flex;
             gap: 15px;
             justify-content: center;
-            margin-top: 5px;
         }
         .exit-btn, .reset-btn {
             background: #4a3a3a;
@@ -211,14 +217,6 @@
         .exit-btn:active, .reset-btn:active {
             transform: translateY(3px);
             box-shadow: 0 1px 0 #2a1a1a;
-        }
-        .coords {
-            color: #d0e0d0;
-            font-family: monospace;
-            font-size: 18px;
-            text-align: center;
-            text-shadow: 2px 2px 0 #1a2a1a;
-            letter-spacing: 2px;
         }
         canvas {
             display: block;
@@ -421,22 +419,21 @@
             <div class="color-grid" id="colorGrid"></div>
         </div>
         <button id="createRoomBtn">СОЗДАТЬ КОМНАТУ</button>
-        
-        <!-- Контейнер для ссылки -->
-        <div id="roomLinkContainer" class="room-link-container">
-            <div class="room-link-label">📱 ОТПРАВЬ ЭТУ ССЫЛКУ ДРУГУ:</div>
-            <div class="room-link-box">
-                <input type="text" id="roomLinkInput" class="room-link-input" readonly>
-                <button class="copy-btn" id="copyLinkBtn">КОПИРОВАТЬ</button>
-            </div>
-            <div id="qrContainer" class="qr-container"></div>
-        </div>
-        
         <div id="errorMsg"></div>
     </div>
 
     <div class="game" id="gameScreen" style="display: none;">
         <div class="game-header">
+            <!-- Контейнер для ссылки - прямо над координатами -->
+            <div id="roomLinkContainer" class="room-link-container" style="display: none;">
+                <div class="room-link-label">📱 ОТПРАВЬ ЭТУ ССЫЛКУ ДРУГУ:</div>
+                <div class="room-link-box">
+                    <input type="text" id="roomLinkInput" class="room-link-input" readonly>
+                    <button class="copy-btn" id="copyLinkBtn">КОПИРОВАТЬ</button>
+                </div>
+                <div id="qrContainer" class="qr-container"></div>
+            </div>
+            
             <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
             <div class="header-buttons">
                 <button class="reset-btn" id="resetBtn">СБРОС</button>
@@ -610,7 +607,22 @@
             // Создаем ссылку-приглашение
             const link = `${window.location.origin}${window.location.pathname}?join=${currentRoomId}`;
             
-            // Показываем контейнер со ссылкой
+            // Добавляем себя
+            players.set(myId, {
+                id: myId,
+                name: myName,
+                color: selectedColor,
+                x: 0, y: 0,
+                lastDir: { x: 0, y: -1 },
+                r: 18
+            });
+            
+            // Сохраняем в localStorage
+            saveGameData();
+            
+            showGame();
+            
+            // Показываем ссылку ПОСЛЕ того как игра загрузилась
             roomLinkContainer.style.display = 'block';
             roomLinkInput.value = link;
             
@@ -628,21 +640,6 @@
                     qrContainer.appendChild(qrCanvas);
                 }
             });
-            
-            // Добавляем себя
-            players.set(myId, {
-                id: myId,
-                name: myName,
-                color: selectedColor,
-                x: 0, y: 0,
-                lastDir: { x: 0, y: -1 },
-                r: 18
-            });
-            
-            // Сохраняем в localStorage
-            saveGameData();
-            
-            showGame();
         };
         
         // Копирование ссылки
