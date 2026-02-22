@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мультиплеер · P2P</title>
+    <title>Mymap · мультиплеер</title>
     <style>
         * {
             margin: 0;
@@ -32,8 +32,9 @@
         #loginScreen h2 {
             text-align: center;
             margin-bottom: 30px;
-            font-size: 28px;
+            font-size: 32px;
             text-shadow: 3px 3px 0 #1a2a1a;
+            letter-spacing: 4px;
         }
         .input-group {
             margin-bottom: 25px;
@@ -42,6 +43,7 @@
             display: block;
             margin-bottom: 8px;
             font-size: 16px;
+            text-align: center;
         }
         .input-group input {
             width: 100%;
@@ -53,30 +55,10 @@
             font-size: 18px;
             font-family: monospace;
             outline: none;
+            text-align: center;
         }
         .input-group input:focus {
             border-color: #7cb57c;
-        }
-        .room-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .room-btn {
-            flex: 1;
-            padding: 15px;
-            background: #4a7a4a;
-            border: none;
-            border-radius: 30px;
-            color: #d0e0d0;
-            font-size: 18px;
-            cursor: pointer;
-            box-shadow: 0 5px 0 #1a2a1a;
-            transition: 0.05s linear;
-        }
-        .room-btn:active {
-            transform: translateY(3px);
-            box-shadow: 0 2px 0 #1a2a1a;
         }
         .color-grid {
             display: grid;
@@ -107,7 +89,7 @@
         .color-pink { background: #ff88ff; }
         .color-purple { background: #aa44ff; }
         
-        #joinBtn {
+        #startBtn {
             width: 100%;
             padding: 18px;
             background: #4a7a4a;
@@ -122,7 +104,7 @@
             transition: 0.05s linear;
             font-family: monospace;
         }
-        #joinBtn:active {
+        #startBtn:active {
             transform: translateY(5px);
             box-shadow: 0 3px 0 #1a2a1a;
         }
@@ -249,24 +231,17 @@
 </head>
 <body>
     <div id="loginScreen">
-        <h2>🔮 МУЛЬТИПЛЕЕР 🔮</h2>
+        <h2>MYMAP</h2>
         <div class="input-group">
             <label>ТВОЁ ИМЯ (3-20 символов, a-z, 0-9, _)</label>
             <input type="text" id="nameInput" maxlength="20" placeholder="Player_1">
         </div>
         <div class="input-group">
-            <label>КОМНАТА</label>
-            <input type="text" id="roomInput" maxlength="20" placeholder="mygame">
-        </div>
-        <div class="room-group">
-            <button class="room-btn" id="createRoom">СОЗДАТЬ</button>
-            <button class="room-btn" id="joinRoom">ПРИСОЕДИНИТЬСЯ</button>
-        </div>
-        <div class="input-group">
             <label>ЦВЕТ</label>
             <div class="color-grid" id="colorGrid"></div>
         </div>
-        <div id="playerCount">👥 0 игроков в комнате</div>
+        <button id="startBtn">НАЧАТЬ</button>
+        <div id="playerCount">👥 0 игроков</div>
         <div id="errorMsg"></div>
     </div>
 
@@ -300,8 +275,6 @@
         let selectedColor = 'white';
         let myId = 'player_' + Math.random().toString(36).substr(2, 9);
         let myName = '';
-        let roomId = '';
-        let isHost = false;
         
         // Создаем сетку цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -319,15 +292,16 @@
         
         // PeerJS соединение
         let peer = null;
-        let connections = new Map(); // все соединения с другими игроками
-        let players = new Map(); // все игроки в комнате
+        let connections = new Map();
+        let players = new Map();
+        let isHost = false;
+        const ROOM_ID = 'mymap_room'; // фиксированная комната
         
-        // Статические препятствия (одинаковые для всех)
+        // Статические препятствия
         const staticObstacles = [];
         const WORLD_SIZE = 2000;
         const SPAWN_RADIUS = 400;
         
-        // Генерируем статические препятствия
         for (let i = 0; i < 150; i++) {
             let x, y, dist;
             do {
@@ -347,30 +321,26 @@
             
             staticObstacles.push({
                 x: x - w/2,
-                y: y - h/2,
+                y: y - w/2,
                 w, h
             });
         }
         
-        // Созданные препятствия
         let playerObstacles = [];
         const MAX_PLAYER_OBSTACLES = 10;
         
-        // Игрок
         const player = {
             x: 0,
             y: 0,
             r: 18
         };
         
-        // Джойстик
         let drag = false;
         const maxDist = 35;
         const vec = { x: 0, y: 0 };
         const SPEED = 5;
         let lastDir = { x: 0, y: -1 };
         
-        // DOM элементы
         const canvas = document.getElementById('world');
         const ctx = canvas.getContext('2d');
         const joyDiv = document.getElementById('joystick');
@@ -381,65 +351,25 @@
         const counterDiv = document.getElementById('counter');
         const connectionInfo = document.getElementById('connectionInfo');
         
-        // Функции P2P
-        function createRoom() {
+        function startGame() {
             const name = document.getElementById('nameInput').value.trim();
-            const room = document.getElementById('roomInput').value.trim();
             
-            if (!validateInput(name, room)) return;
+            if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
+                document.getElementById('errorMsg').textContent = 'Недопустимое имя (3-20 символов, a-z, 0-9, _)';
+                return;
+            }
             
             myName = name;
-            roomId = room;
-            isHost = true;
-            
-            peer = new Peer(myId + '_' + roomId);
-            
-            peer.on('open', () => {
-                players.set(myId, {
-                    id: myId,
-                    name: myName,
-                    color: selectedColor,
-                    x: 0, y: 0,
-                    lastDir: { x: 0, y: -1 }
-                });
-                
-                showGame();
-                updatePlayerCount();
-            });
-            
-            peer.on('connection', (conn) => {
-                connections.set(conn.peer, conn);
-                
-                conn.on('data', (data) => {
-                    handleData(conn.peer, data);
-                });
-                
-                // Отправляем текущее состояние новому игроку
-                conn.send({
-                    type: 'init',
-                    players: Array.from(players.values()),
-                    obstacles: playerObstacles
-                });
-            });
-        }
-        
-        function joinRoom() {
-            const name = document.getElementById('nameInput').value.trim();
-            const room = document.getElementById('roomInput').value.trim();
-            
-            if (!validateInput(name, room)) return;
-            
-            myName = name;
-            roomId = room;
-            isHost = false;
             
             peer = new Peer();
             
             peer.on('open', () => {
-                // Подключаемся к хосту
-                const conn = peer.connect(myId + '_' + roomId);
+                // Пытаемся подключиться к хосту
+                const conn = peer.connect(ROOM_ID);
                 
                 conn.on('open', () => {
+                    // Подключились как клиент
+                    isHost = false;
                     connections.set(conn.peer, conn);
                     
                     conn.send({
@@ -458,26 +388,60 @@
                         name: myName,
                         color: selectedColor,
                         x: 0, y: 0,
-                        lastDir: { x: 0, y: -1 }
+                        lastDir: { x: 0, y: -1 },
+                        r: 18
                     });
                 });
                 
                 conn.on('data', (data) => {
                     handleData(conn.peer, data);
                 });
+                
+                conn.on('error', () => {
+                    // Никто не ответил - становимся хостом
+                    becomeHost();
+                });
+                
+                // Таймаут если нет ответа
+                setTimeout(() => {
+                    if (!isHost && players.size <= 1) {
+                        becomeHost();
+                    }
+                }, 1000);
             });
         }
         
-        function validateInput(name, room) {
-            if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
-                document.getElementById('errorMsg').textContent = 'Недопустимое имя';
-                return false;
-            }
-            if (room.length < 1 || room.length > 20) {
-                document.getElementById('errorMsg').textContent = 'Введите название комнаты';
-                return false;
-            }
-            return true;
+        function becomeHost() {
+            isHost = true;
+            peer = new Peer(ROOM_ID);
+            
+            peer.on('open', () => {
+                players.set(myId, {
+                    id: myId,
+                    name: myName,
+                    color: selectedColor,
+                    x: 0, y: 0,
+                    lastDir: { x: 0, y: -1 },
+                    r: 18
+                });
+                
+                showGame();
+                updatePlayerCount();
+            });
+            
+            peer.on('connection', (conn) => {
+                connections.set(conn.peer, conn);
+                
+                conn.on('data', (data) => {
+                    handleData(conn.peer, data);
+                });
+                
+                conn.send({
+                    type: 'init',
+                    players: Array.from(players.values()),
+                    obstacles: playerObstacles
+                });
+            });
         }
         
         function handleData(peerId, data) {
@@ -490,7 +454,6 @@
                     
                 case 'join':
                     players.set(data.player.id, data.player);
-                    // Отправляем всем обновление
                     broadcast({
                         type: 'playerJoined',
                         player: data.player
@@ -538,13 +501,13 @@
         function showGame() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
-            connectionInfo.textContent = `👥 ${players.size} игроков | комната: ${roomId}`;
+            connectionInfo.textContent = `👥 ${players.size} игроков`;
         }
         
         function updatePlayerCount() {
-            document.getElementById('playerCount').textContent = `👥 ${players.size} игроков в комнате`;
+            document.getElementById('playerCount').textContent = `👥 ${players.size} игроков`;
             if (document.getElementById('gameScreen').style.display === 'block') {
-                connectionInfo.textContent = `👥 ${players.size} игроков | комната: ${roomId}`;
+                connectionInfo.textContent = `👥 ${players.size} игроков`;
             }
         }
         
@@ -553,11 +516,8 @@
             counterDiv.textContent = `${myObstacles}/${MAX_PLAYER_OBSTACLES}`;
         }
         
-        // Кнопки
-        document.getElementById('createRoom').onclick = createRoom;
-        document.getElementById('joinRoom').onclick = joinRoom;
+        document.getElementById('startBtn').onclick = startGame;
         
-        // Проверка столкновений
         function canMoveTo(nx, ny, r) {
             for (let ob of staticObstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
@@ -576,7 +536,7 @@
             for (let p of players.values()) {
                 if (p.id === myId) continue;
                 const d = Math.hypot(nx - p.x, ny - p.y);
-                if (d < r + p.r) return false;
+                if (d < r + (p.r || 18)) return false;
             }
             
             return true;
@@ -600,7 +560,6 @@
             }
         }
         
-        // Создание препятствия
         function createObstacle() {
             const myObstacles = playerObstacles.filter(o => o.playerId === myId).length;
             if (myObstacles >= MAX_PLAYER_OBSTACLES) return;
@@ -646,7 +605,6 @@
             updateCounter();
         }
         
-        // Удаление препятствия
         function deleteObstacleAtDot() {
             const len = Math.hypot(lastDir.x, lastDir.y);
             if (len < 0.1) return;
@@ -685,7 +643,6 @@
             coordsDiv.textContent = `X: ${x}  |  Y: ${y}`;
         }
         
-        // Джойстик
         function onStart(e) {
             e.preventDefault();
             drag = true;
@@ -739,7 +696,6 @@
             vec.y = 0;
         }
         
-        // События кнопок
         createBtn.addEventListener('mousedown', (e) => {
             e.preventDefault();
             createObstacle();
@@ -758,7 +714,6 @@
             deleteObstacleAtDot();
         });
         
-        // События джойстика
         joyDiv.addEventListener('mousedown', onStart);
         joyDiv.addEventListener('mousemove', onMove);
         joyDiv.addEventListener('mouseup', onEnd);
@@ -770,7 +725,6 @@
         joyDiv.addEventListener('touchcancel', onEnd);
         joyDiv.addEventListener('contextmenu', e => e.preventDefault());
         
-        // Цвета для отрисовки
         function getColor(colorName) {
             switch(colorName) {
                 case 'white': return '#ffffff';
@@ -787,18 +741,15 @@
             }
         }
         
-        // Отрисовка
         function draw() {
             ctx.clearRect(0, 0, 600, 600);
             
             const camX = player.x - 300;
             const camY = player.y - 300;
             
-            // Фон
             ctx.fillStyle = '#7cb57c';
             ctx.fillRect(0, 0, 600, 600);
             
-            // Статические препятствия
             ctx.fillStyle = '#5a4f4a';
             ctx.shadowColor = '#3a2f2a';
             ctx.shadowBlur = 18;
@@ -811,7 +762,6 @@
                 }
             }
             
-            // Созданные препятствия
             for (let ob of playerObstacles) {
                 const screenX = ob.x - camX;
                 const screenY = ob.y - camY;
@@ -827,7 +777,6 @@
                 }
             }
             
-            // Другие игроки
             for (let p of players.values()) {
                 if (p.id === myId) continue;
                 
@@ -871,7 +820,6 @@
                 }
             }
             
-            // Текущий игрок
             ctx.shadowBlur = 28;
             ctx.shadowColor = '#4aa0c0';
             ctx.beginPath();
@@ -890,7 +838,6 @@
             ctx.textAlign = 'center';
             ctx.fillText(myName, 300, 300 - 28);
             
-            // Точка направления
             const dirToUse = drag ? vec : lastDir;
             const len = Math.hypot(dirToUse.x, dirToUse.y);
             if (len > 0.1) {
@@ -914,7 +861,6 @@
                 ctx.fill();
             }
             
-            // Точка спавна
             ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(300 - player.x, 300 - player.y, 14, 0, 2*Math.PI);
@@ -925,12 +871,10 @@
             ctx.stroke();
         }
         
-        // Игровой цикл
         function loop() {
             if (drag && peer) {
                 move(vec.x * SPEED, vec.y * SPEED);
                 
-                // Отправляем позицию всем
                 broadcast({
                     type: 'move',
                     id: myId,
