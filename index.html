@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mymap · по ссылке</title>
+    <title>Mymap · мультиплеер</title>
     <style>
         * {
             margin: 0;
@@ -408,6 +408,10 @@
             <div class="color-grid" id="colorGrid"></div>
         </div>
         <button id="createRoomBtn">СОЗДАТЬ КОМНАТУ</button>
+        <div id="joinPanel" style="margin-top: 15px; display: none;">
+            <input type="text" id="roomIdInput" placeholder="Код комнаты" style="width:100%; padding:15px; margin-bottom:10px; background:#1a2a1a; border:3px solid #4a7a4a; border-radius:30px; color:#d0e0d0; font-size:18px; text-align:center;">
+            <button id="joinRoomBtn" style="width:100%; padding:15px; background:#4a7a4a; border:none; border-radius:40px; color:#d0e0d0; font-size:20px; font-weight:bold; cursor:pointer; box-shadow:0 6px 0 #1a2a1a;">ПРИСОЕДИНИТЬСЯ</button>
+        </div>
         <div id="errorMsg"></div>
     </div>
 
@@ -560,26 +564,23 @@
         const submitCode = document.getElementById('submitCode');
         const cancelCode = document.getElementById('cancelCode');
         
-        // Элементы для ссылки
+        // Элементы для комнаты
         const roomLinkContainer = document.getElementById('roomLinkContainer');
         const roomLinkInput = document.getElementById('roomLinkInput');
         const copyBtn = document.getElementById('copyLinkBtn');
+        const joinPanel = document.getElementById('joinPanel');
+        const roomIdInput = document.getElementById('roomIdInput');
+        const joinRoomBtn = document.getElementById('joinRoomBtn');
         
         // Интервал для синхронизации
         let syncInterval = null;
-        let lastSyncData = '';
         
-        // Проверяем URL на параметр join
-        const urlParams = new URLSearchParams(window.location.search);
-        const joinId = urlParams.get('join');
-        
-        if (joinId) {
-            // Автоматически присоединяемся по ссылке
-            setTimeout(() => {
-                document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
-                joinRoom(joinId);
-            }, 500);
-        }
+        // Показываем поле для ввода кода комнаты через 2 секунды
+        setTimeout(() => {
+            if (!currentRoomId) {
+                joinPanel.style.display = 'block';
+            }
+        }, 2000);
         
         // Создание комнаты
         document.getElementById('createRoomBtn').onclick = () => {
@@ -607,7 +608,7 @@
             });
             
             // Сохраняем в localStorage
-            saveGameData(true);
+            saveGameData();
             
             showGame();
             
@@ -615,24 +616,22 @@
             roomLinkContainer.style.display = 'block';
             roomLinkInput.value = link;
             
+            // Скрываем панель присоединения
+            joinPanel.style.display = 'none';
+            
             // Запускаем синхронизацию
             startSync();
         };
         
-        // Копирование ссылки
-        copyBtn.onclick = () => {
-            roomLinkInput.select();
-            navigator.clipboard.writeText(roomLinkInput.value).then(() => {
-                copyBtn.textContent = 'ГОТОВО!';
-                setTimeout(() => {
-                    copyBtn.textContent = 'КОПИРОВАТЬ ССЫЛКУ';
-                }, 2000);
-            });
-        };
-        
-        // Функция присоединения
-        function joinRoom(roomId) {
+        // Присоединение к комнате
+        joinRoomBtn.onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
+            const roomId = roomIdInput.value.trim();
+            
+            if (!roomId || roomId.length !== 6 || !/^\d+$/.test(roomId)) {
+                document.getElementById('errorMsg').textContent = 'Введите 6-значный код комнаты';
+                return;
+            }
             
             if (!validateName(name)) return;
             
@@ -654,15 +653,29 @@
             });
             
             // Сохраняем обновленные данные (с новым игроком)
-            saveGameData(true);
+            saveGameData();
             
             showGame();
             
+            // Скрываем панель присоединения
+            joinPanel.style.display = 'none';
+            
             // Запускаем синхронизацию
             startSync();
-        }
+        };
         
-        // Синхронизация данных
+        // Копирование ссылки
+        copyBtn.onclick = () => {
+            roomLinkInput.select();
+            navigator.clipboard.writeText(roomLinkInput.value).then(() => {
+                copyBtn.textContent = 'ГОТОВО!';
+                setTimeout(() => {
+                    copyBtn.textContent = 'КОПИРОВАТЬ ССЫЛКУ';
+                }, 2000);
+            });
+        };
+        
+        // Синхронизация данных (КАЖДЫЕ 50 МС для реального времени)
         function startSync() {
             if (syncInterval) clearInterval(syncInterval);
             
@@ -677,29 +690,21 @@
                     }
                     
                     // Сохраняем данные
-                    saveGameData(false);
+                    saveGameData();
                     
-                    // Загружаем данные других игроков
+                    // Загружаем данные других
                     loadGameData();
                 }
-            }, 50); // Синхронизация каждые 50мс для максимальной плавности
+            }, 50);
         }
         
-        function saveGameData(notify) {
+        function saveGameData() {
             const data = {
                 players: Array.from(players.values()),
                 obstacles: playerObstacles,
-                host: isHost ? myId : null,
                 timestamp: Date.now()
             };
-            const jsonData = JSON.stringify(data);
-            localStorage.setItem('mymap_' + currentRoomId, jsonData);
-            
-            // Если нужно уведомить других (при создании/удалении игрока или препятствия)
-            if (notify) {
-                // Сохраняем специальный ключ для уведомления
-                localStorage.setItem('mymap_notify_' + currentRoomId, Date.now().toString());
-            }
+            localStorage.setItem('mymap_' + currentRoomId, JSON.stringify(data));
         }
         
         function loadGameData() {
@@ -708,30 +713,23 @@
                 try {
                     const data = JSON.parse(saved);
                     
-                    // Сохраняем старый список игроков для проверки изменений
-                    const oldPlayers = new Map(players);
+                    // Сохраняем свою позицию
+                    const myX = player.x;
+                    const myY = player.y;
+                    const myLastDir = { ...lastDir };
                     
-                    // Обновляем список игроков, но сохраняем себя
-                    const myOldData = players.get(myId);
+                    // Обновляем всех игроков
                     players.clear();
-                    
                     data.players.forEach(p => {
-                        if (p.id === myId && myOldData) {
-                            // Восстанавливаем свою позицию
-                            players.set(myId, {
-                                ...p,
-                                x: myOldData.x,
-                                y: myOldData.y,
-                                lastDir: myOldData.lastDir
-                            });
-                        } else {
-                            players.set(p.id, p);
-                        }
+                        players.set(p.id, p);
                     });
                     
-                    // Проверяем, появились ли новые игроки
-                    if (oldPlayers.size !== players.size) {
-                        updatePlayerList();
+                    // Восстанавливаем свою позицию (она не должна меняться от загруженных данных)
+                    const myPlayer = players.get(myId);
+                    if (myPlayer) {
+                        myPlayer.x = myX;
+                        myPlayer.y = myY;
+                        myPlayer.lastDir = myLastDir;
                     }
                     
                     // Обновляем препятствия
@@ -743,13 +741,10 @@
             }
         }
         
-        // Слушаем изменения в localStorage (для уведомлений от других игроков)
+        // Слушаем изменения в localStorage (для мгновенного обновления)
         window.addEventListener('storage', (e) => {
-            if (e.key === 'mymap_notify_' + currentRoomId) {
-                // Кто-то изменил данные, загружаем обновления
-                setTimeout(() => {
-                    loadGameData();
-                }, 10);
+            if (e.key === 'mymap_' + currentRoomId) {
+                loadGameData();
             }
         });
         
@@ -764,13 +759,12 @@
         function showGame() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
-            connectionStatus.textContent = isHost ? '🟢 Хост' : '🟢 Подключено';
+            connectionStatus.textContent = isHost ? '🟢 Хост' : '🟢 Подключено к комнате ' + currentRoomId;
             updatePlayerList();
             updateCounter();
         }
         
         function resetGame() {
-            // Останавливаем синхронизацию
             if (syncInterval) {
                 clearInterval(syncInterval);
                 syncInterval = null;
@@ -779,22 +773,21 @@
             playerObstacles = [];
             players.clear();
             
-            // Удаляем данные комнаты
             if (currentRoomId) {
                 localStorage.removeItem('mymap_' + currentRoomId);
-                localStorage.removeItem('mymap_notify_' + currentRoomId);
             }
             
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'block';
             roomLinkContainer.style.display = 'none';
+            joinPanel.style.display = 'block';
+            roomIdInput.value = '';
             
             player.x = 0;
             player.y = 0;
             lastDir = { x: 0, y: -1 };
             document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
             
-            // Очищаем URL от параметров
             window.history.replaceState({}, document.title, window.location.pathname);
         }
         
@@ -835,7 +828,7 @@
             const list = Array.from(players.values())
                 .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}${p.id === myId ? ' (вы)' : ''}`)
                 .join('<br>');
-            playerListDiv.innerHTML = `👥 Игроки:<br>${list}`;
+            playerListDiv.innerHTML = `👥 Игроки (${players.size}):<br>${list}`;
         }
         
         function canMoveTo(nx, ny, r) {
@@ -921,7 +914,7 @@
             };
             
             playerObstacles.push(obstacle);
-            saveGameData(true); // Сохраняем с уведомлением
+            saveGameData();
             updateCounter();
         }
         
@@ -942,7 +935,7 @@
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
                         playerObstacles.splice(i, 1);
-                        saveGameData(true); // Сохраняем с уведомлением
+                        saveGameData();
                         updateCounter();
                     }
                     return;
