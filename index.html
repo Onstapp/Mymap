@@ -304,19 +304,15 @@
             colorGrid.appendChild(div);
         });
         
-        // PeerJS соединение с ключом
+        // Единая комната для всех
+        const ROOM_ID = 'mymap_global_room';
+        
+        // PeerJS настройки
         const peerOptions = {
-            host: '0.peerjs.com',
-            port: 443,
-            path: '/',
-            secure: true,
             config: {
                 'iceServers': [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' }
+                    { urls: 'stun:stun1.l.google.com:19302' }
                 ]
             }
         };
@@ -324,8 +320,6 @@
         let peer = null;
         let connections = new Map();
         let players = new Map();
-        let isHost = false;
-        const ROOM_ID = 'mymap_room_' + Math.random().toString(36).substr(2, 8); // уникальная комната при каждом запуске
         
         // Статические препятствия
         const staticObstacles = [];
@@ -395,73 +389,15 @@
             document.getElementById('startBtn').innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
             document.getElementById('startBtn').disabled = true;
             
-            // Создаем peer
-            peer = new Peer(peerOptions);
-            
-            peer.on('open', (id) => {
-                // Успешно создали peer
-                isHost = true;
-                
-                players.set(myId, {
-                    id: myId,
-                    name: myName,
-                    color: selectedColor,
-                    x: 0, y: 0,
-                    lastDir: { x: 0, y: -1 },
-                    r: 18
-                });
-                
-                showGame();
-                updatePlayerCount();
-                
-                // Показываем ID комнаты для подключения
-                document.getElementById('errorMsg').innerHTML = `Комната создана! ID: ${id}<br>Скажи другим ввести этот ID в консоль (F12) и набрать: connectToRoom('${id}')`;
-                
-                // Слушаем подключения
-                peer.on('connection', (conn) => {
-                    connections.set(conn.peer, conn);
-                    
-                    conn.on('data', (data) => {
-                        handleData(conn.peer, data);
-                    });
-                    
-                    conn.on('close', () => {
-                        connections.delete(conn.peer);
-                    });
-                    
-                    // Отправляем текущее состояние
-                    conn.send({
-                        type: 'init',
-                        players: Array.from(players.values()),
-                        obstacles: playerObstacles
-                    });
-                });
-            });
-            
-            peer.on('error', (err) => {
-                document.getElementById('errorMsg').textContent = 'Ошибка: ' + err.type;
-                document.getElementById('startBtn').innerHTML = 'НАЧАТЬ';
-                document.getElementById('startBtn').disabled = false;
-            });
-        }
-        
-        // Функция для подключения других игроков (вызывается из консоли)
-        window.connectToRoom = function(hostId) {
-            const name = document.getElementById('nameInput').value.trim();
-            
-            if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
-                document.getElementById('errorMsg').textContent = 'Недопустимое имя';
-                return;
-            }
-            
-            myName = name;
-            
+            // Пытаемся подключиться к существующей комнате
             peer = new Peer(peerOptions);
             
             peer.on('open', () => {
-                const conn = peer.connect(hostId);
+                // Пытаемся подключиться к хосту
+                const conn = peer.connect(ROOM_ID);
                 
                 conn.on('open', () => {
+                    // Подключились как клиент
                     connections.set(conn.peer, conn);
                     
                     conn.on('data', (data) => {
@@ -496,8 +432,65 @@
                 });
                 
                 conn.on('error', () => {
-                    document.getElementById('errorMsg').textContent = 'Не удалось подключиться';
+                    // Никто не ответил - становимся хостом
+                    becomeHost();
                 });
+                
+                // Таймаут на случай если нет ответа
+                setTimeout(() => {
+                    if (players.size <= 1 && !isHost) {
+                        becomeHost();
+                    }
+                }, 2000);
+            });
+        }
+        
+        let isHost = false;
+        
+        function becomeHost() {
+            isHost = true;
+            
+            // Создаем комнату как хост
+            peer = new Peer(ROOM_ID, peerOptions);
+            
+            peer.on('open', () => {
+                players.set(myId, {
+                    id: myId,
+                    name: myName,
+                    color: selectedColor,
+                    x: 0, y: 0,
+                    lastDir: { x: 0, y: -1 },
+                    r: 18
+                });
+                
+                showGame();
+                updatePlayerCount();
+                
+                // Слушаем подключения
+                peer.on('connection', (conn) => {
+                    connections.set(conn.peer, conn);
+                    
+                    conn.on('data', (data) => {
+                        handleData(conn.peer, data);
+                    });
+                    
+                    conn.on('close', () => {
+                        connections.delete(conn.peer);
+                    });
+                    
+                    // Отправляем текущее состояние
+                    conn.send({
+                        type: 'init',
+                        players: Array.from(players.values()),
+                        obstacles: playerObstacles
+                    });
+                });
+            });
+            
+            peer.on('error', (err) => {
+                document.getElementById('errorMsg').textContent = 'Ошибка: ' + err.type;
+                document.getElementById('startBtn').innerHTML = 'НАЧАТЬ';
+                document.getElementById('startBtn').disabled = false;
             });
         }
         
