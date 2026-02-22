@@ -567,6 +567,7 @@
         
         // Интервал для синхронизации
         let syncInterval = null;
+        let lastSyncData = '';
         
         // Проверяем URL на параметр join
         const urlParams = new URLSearchParams(window.location.search);
@@ -606,7 +607,7 @@
             });
             
             // Сохраняем в localStorage
-            saveGameData();
+            saveGameData(true);
             
             showGame();
             
@@ -614,7 +615,7 @@
             roomLinkContainer.style.display = 'block';
             roomLinkInput.value = link;
             
-            // Запускаем синхронизацию для хоста
+            // Запускаем синхронизацию
             startSync();
         };
         
@@ -653,11 +654,11 @@
             });
             
             // Сохраняем обновленные данные (с новым игроком)
-            saveGameData();
+            saveGameData(true);
             
             showGame();
             
-            // Запускаем синхронизацию для всех
+            // Запускаем синхронизацию
             startSync();
         }
         
@@ -667,39 +668,38 @@
             
             syncInterval = setInterval(() => {
                 if (currentRoomId) {
-                    if (isHost) {
-                        // Хост сохраняет свои данные (свою позицию)
-                        const myPlayer = players.get(myId);
-                        if (myPlayer) {
-                            myPlayer.x = player.x;
-                            myPlayer.y = player.y;
-                            myPlayer.lastDir = lastDir;
-                        }
-                        saveGameData();
-                    } else {
-                        // Игрок загружает данные хоста и других игроков
-                        loadGameData();
-                        
-                        // Обновляем свою позицию в сохраненных данных
-                        const myPlayer = players.get(myId);
-                        if (myPlayer) {
-                            myPlayer.x = player.x;
-                            myPlayer.y = player.y;
-                            myPlayer.lastDir = lastDir;
-                            saveGameData();
-                        }
+                    // Обновляем свою позицию
+                    const myPlayer = players.get(myId);
+                    if (myPlayer) {
+                        myPlayer.x = player.x;
+                        myPlayer.y = player.y;
+                        myPlayer.lastDir = lastDir;
                     }
+                    
+                    // Сохраняем данные
+                    saveGameData(false);
+                    
+                    // Загружаем данные других игроков
+                    loadGameData();
                 }
-            }, 100); // Синхронизация каждые 100мс для плавности
+            }, 50); // Синхронизация каждые 50мс для максимальной плавности
         }
         
-        function saveGameData() {
+        function saveGameData(notify) {
             const data = {
                 players: Array.from(players.values()),
                 obstacles: playerObstacles,
-                host: isHost ? myId : null
+                host: isHost ? myId : null,
+                timestamp: Date.now()
             };
-            localStorage.setItem('mymap_' + currentRoomId, JSON.stringify(data));
+            const jsonData = JSON.stringify(data);
+            localStorage.setItem('mymap_' + currentRoomId, jsonData);
+            
+            // Если нужно уведомить других (при создании/удалении игрока или препятствия)
+            if (notify) {
+                // Сохраняем специальный ключ для уведомления
+                localStorage.setItem('mymap_notify_' + currentRoomId, Date.now().toString());
+            }
         }
         
         function loadGameData() {
@@ -707,6 +707,9 @@
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
+                    
+                    // Сохраняем старый список игроков для проверки изменений
+                    const oldPlayers = new Map(players);
                     
                     // Обновляем список игроков, но сохраняем себя
                     const myOldData = players.get(myId);
@@ -726,6 +729,11 @@
                         }
                     });
                     
+                    // Проверяем, появились ли новые игроки
+                    if (oldPlayers.size !== players.size) {
+                        updatePlayerList();
+                    }
+                    
                     // Обновляем препятствия
                     playerObstacles = data.obstacles || [];
                     
@@ -734,6 +742,16 @@
                 } catch(e) {}
             }
         }
+        
+        // Слушаем изменения в localStorage (для уведомлений от других игроков)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'mymap_notify_' + currentRoomId) {
+                // Кто-то изменил данные, загружаем обновления
+                setTimeout(() => {
+                    loadGameData();
+                }, 10);
+            }
+        });
         
         function validateName(name) {
             if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
@@ -764,6 +782,7 @@
             // Удаляем данные комнаты
             if (currentRoomId) {
                 localStorage.removeItem('mymap_' + currentRoomId);
+                localStorage.removeItem('mymap_notify_' + currentRoomId);
             }
             
             document.getElementById('gameScreen').style.display = 'none';
@@ -814,7 +833,7 @@
         
         function updatePlayerList() {
             const list = Array.from(players.values())
-                .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}`)
+                .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}${p.id === myId ? ' (вы)' : ''}`)
                 .join('<br>');
             playerListDiv.innerHTML = `👥 Игроки:<br>${list}`;
         }
@@ -902,7 +921,7 @@
             };
             
             playerObstacles.push(obstacle);
-            saveGameData(); // Сохраняем сразу после создания
+            saveGameData(true); // Сохраняем с уведомлением
             updateCounter();
         }
         
@@ -923,7 +942,7 @@
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
                         playerObstacles.splice(i, 1);
-                        saveGameData(); // Сохраняем после удаления
+                        saveGameData(true); // Сохраняем с уведомлением
                         updateCounter();
                     }
                     return;
