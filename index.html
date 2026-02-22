@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>кружок · бесконечный мир</title>
+    <title>кружок двигается</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
             -webkit-tap-highlight-color: transparent;
         }
         body {
-            background: #0c0f17;
+            background: #0a0d15;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -21,281 +21,280 @@
             touch-action: none;
         }
         .game {
-            background: #151b28;
-            border-radius: 32px;
+            background: #141b28;
+            border-radius: 40px;
             padding: 20px;
-            box-shadow: 0 20px 30px #00000080;
+            box-shadow: 0 20px 35px #000000b3;
         }
         canvas {
             display: block;
-            width: min(380px, 85vw);
-            height: min(380px, 85vw);
-            background: #1f2638;
-            border-radius: 28px;
-            box-shadow: inset 0 0 0 2px #2f3853;
+            width: min(360px, 80vw);
+            height: min(360px, 80vw);
+            background: #1f283c;
+            border-radius: 32px;
+            box-shadow: inset 0 0 0 3px #2f3b55;
         }
-        .stick {
+        .joypad {
             display: flex;
             justify-content: center;
-            margin-top: 16px;
+            margin-top: 20px;
         }
         .joystick {
-            width: min(130px, 28vw);
-            height: min(130px, 28vw);
-            background: #1e2538;
+            width: min(140px, 30vw);
+            height: min(140px, 30vw);
+            background: #1c2338;
             border-radius: 999px;
-            box-shadow: 0 7px 0 #0d111c, inset 0 -3px 8px #2e3653;
+            box-shadow: 0 8px 0 #0e1220, inset 0 -3px 10px #2d3655;
             position: relative;
             touch-action: none;
         }
         .thumb {
             position: absolute;
-            width: 44px;
-            height: 44px;
-            background: #aec9ff;
+            width: 48px;
+            height: 48px;
+            background: #b8d0ff;
             border-radius: 999px;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 5px 10px #1a1f33, 0 0 0 3px #2f3a60;
-            transition: 0.02s linear;
+            box-shadow: 0 6px 12px #1a1f33, 0 0 0 4px #33405f;
+            transition: transform 0.02s;
+            will-change: transform;
         }
     </style>
 </head>
 <body>
 <div class="game">
-    <canvas id="game" width="500" height="500"></canvas>
-    <div class="stick">
-        <div class="joystick" id="joy">
+    <canvas id="world" width="500" height="500"></canvas>
+    <div class="joypad">
+        <div class="joystick" id="joystick">
             <div class="thumb" id="thumb"></div>
         </div>
     </div>
 </div>
 
 <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    const joy = document.getElementById('joy');
-    const thumb = document.getElementById('thumb');
+    (function() {
+        const canvas = document.getElementById('world');
+        const ctx = canvas.getContext('2d');
+        const joystickDiv = document.getElementById('joystick');
+        const thumbDiv = document.getElementById('thumb');
 
-    // игрок
-    const player = {
-        x: 0,
-        y: 0,
-        r: 16
-    };
-
-    // джойстик
-    let active = false;
-    const maxDist = 32;
-    const dir = { x: 0, y: 0 };
-    const speed = 4;
-
-    // препятствия (процедурные)
-    const blocks = new Map();
-    const blockSize = 48;
-
-    // хэш для генерации
-    function getHash(s) {
-        let h = 0;
-        for (let i = 0; i < s.length; i++) {
-            h = ((h << 5) - h) + s.charCodeAt(i);
-            h |= 0;
-        }
-        return Math.abs(h);
-    }
-
-    function getBlock(wx, wy) {
-        const gx = Math.floor(wx / blockSize) * blockSize;
-        const gy = Math.floor(wy / blockSize) * blockSize;
-        const key = gx + ',' + gy;
-        
-        if (blocks.has(key)) return blocks.get(key);
-        
-        const hash = getHash(key);
-        if (hash % 4 === 0) { // 25% шанс
-            const b = { x: gx, y: gy, w: blockSize, h: blockSize };
-            blocks.set(key, b);
-            return b;
-        } else {
-            blocks.set(key, null);
-            return null;
-        }
-    }
-
-    // проверка столкновения
-    function collide(nx, ny, r) {
-        const cx = Math.floor(nx / blockSize);
-        const cy = Math.floor(ny / blockSize);
-        
-        for (let dx = -1; dx <= 1; dx++) {
-            for (let dy = -1; dy <= 1; dy++) {
-                const wx = (cx + dx) * blockSize + blockSize/2;
-                const wy = (cy + dy) * blockSize + blockSize/2;
-                const b = getBlock(wx, wy);
-                if (!b) continue;
-                
-                const nearX = Math.max(b.x, Math.min(nx, b.x + b.w));
-                const nearY = Math.max(b.y, Math.min(ny, b.y + b.h));
-                const d = Math.hypot(nx - nearX, ny - nearY);
-                if (d < r) return true;
-            }
-        }
-        return false;
-    }
-
-    // движение
-    function move(dx, dy) {
-        if (dx === 0 && dy === 0) return;
-        
-        let nx = player.x + dx;
-        if (!collide(nx, player.y, player.r)) {
-            player.x = nx;
-        }
-        
-        let ny = player.y + dy;
-        if (!collide(player.x, ny, player.r)) {
-            player.y = ny;
-        }
-    }
-
-    // джойстик события
-    function getPos(e) {
-        e.preventDefault();
-        const rect = joy.getBoundingClientRect();
-        const centerX = rect.left + rect.width/2;
-        const centerY = rect.top + rect.height/2;
-        
-        let x, y;
-        if (e.touches) {
-            x = e.touches[0].clientX;
-            y = e.touches[0].clientY;
-        } else {
-            x = e.clientX;
-            y = e.clientY;
-        }
-        
-        let dx = x - centerX;
-        let dy = y - centerY;
-        const dist = Math.hypot(dx, dy);
-        
-        if (dist > maxDist) {
-            dx = (dx / dist) * maxDist;
-            dy = (dy / dist) * maxDist;
-        }
-        
-        return { dx, dy, dist };
-    }
-
-    function onStart(e) {
-        e.preventDefault();
-        active = true;
-        onMove(e);
-    }
-
-    function onMove(e) {
-        if (!active) return;
-        e.preventDefault();
-        
-        const { dx, dy, dist } = getPos(e);
-        thumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-        
-        if (dist > 6) {
-            dir.x = dx / maxDist;
-            dir.y = dy / maxDist;
-        } else {
-            dir.x = 0;
-            dir.y = 0;
-        }
-    }
-
-    function onEnd(e) {
-        e.preventDefault();
-        active = false;
-        thumb.style.transform = 'translate(-50%, -50%)';
-        dir.x = 0;
-        dir.y = 0;
-    }
-
-    // события
-    joy.addEventListener('mousedown', onStart);
-    joy.addEventListener('mousemove', onMove);
-    joy.addEventListener('mouseup', onEnd);
-    joy.addEventListener('mouseleave', onEnd);
-    
-    joy.addEventListener('touchstart', onStart, { passive: false });
-    joy.addEventListener('touchmove', onMove, { passive: false });
-    joy.addEventListener('touchend', onEnd);
-    joy.addEventListener('touchcancel', onEnd);
-    joy.addEventListener('contextmenu', e => e.preventDefault());
-
-    // отрисовка
-    function draw() {
-        ctx.clearRect(0, 0, 500, 500);
-        
-        const camX = player.x - 250;
-        const camY = player.y - 250;
-        
-        // блоки
-        ctx.fillStyle = '#8b7a66';
-        ctx.shadowColor = '#4d3f32';
-        ctx.shadowBlur = 15;
-        
-        const sx = Math.floor((camX - blockSize) / blockSize);
-        const ex = Math.floor((camX + 500 + blockSize) / blockSize);
-        const sy = Math.floor((camY - blockSize) / blockSize);
-        const ey = Math.floor((camY + 500 + blockSize) / blockSize);
-        
-        for (let gy = sy; gy <= ey; gy++) {
-            for (let gx = sx; gx <= ex; gx++) {
-                const wx = gx * blockSize + blockSize/2;
-                const wy = gy * blockSize + blockSize/2;
-                const b = getBlock(wx, wy);
-                if (!b) continue;
-                
-                ctx.fillRect(b.x - camX, b.y - camY, b.w, b.h);
-            }
-        }
-        
         // игрок
-        ctx.shadowBlur = 22;
-        ctx.shadowColor = '#96bcff';
-        ctx.beginPath();
-        ctx.arc(250, 250, player.r, 0, Math.PI*2);
-        ctx.fillStyle = '#dcecff';
-        ctx.fill();
-        ctx.shadowBlur = 8;
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        
-        // глазки (для настроения)
-        ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.arc(240, 240, 4, 0, Math.PI*2);
-        ctx.fillStyle = '#202530';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(260, 240, 4, 0, Math.PI*2);
-        ctx.fill();
-        
-        ctx.beginPath();
-        ctx.arc(242, 238, 1.5, 0, Math.PI*2);
-        ctx.fillStyle = 'white';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(262, 238, 1.5, 0, Math.PI*2);
-        ctx.fill();
-    }
+        const player = {
+            x: 0,
+            y: 0,
+            radius: 18
+        };
 
-    // цикл
-    function loop() {
-        move(dir.x * speed, dir.y * speed);
-        draw();
-        requestAnimationFrame(loop);
-    }
-    
-    loop();
+        // джойстик
+        let isDragging = false;
+        const maxDist = 35;
+        const stickVec = { x: 0, y: 0 };
+        const SPEED = 4.5;
+
+        // препятствия (процедурные)
+        const obstacleMap = new Map();
+        const CELL = 50;
+
+        // ----- генерация препятствий -----
+        function getObstacle(worldX, worldY) {
+            const gx = Math.floor(worldX / CELL) * CELL;
+            const gy = Math.floor(worldY / CELL) * CELL;
+            const key = gx + '|' + gy;
+            
+            if (obstacleMap.has(key)) {
+                return obstacleMap.get(key);
+            }
+            
+            // псевдослучайно, но стабильно для координат
+            const hash = (gx * 7919) ^ (gy * 4621);
+            if (hash % 5 === 0) { // 20% заполненность
+                const obs = { x: gx, y: gy, w: CELL, h: CELL };
+                obstacleMap.set(key, obs);
+                return obs;
+            } else {
+                obstacleMap.set(key, null);
+                return null;
+            }
+        }
+
+        // ----- проверка столкновений -----
+        function canMoveTo(newX, newY, r) {
+            const leftCell = Math.floor((newX - r) / CELL);
+            const rightCell = Math.floor((newX + r) / CELL);
+            const topCell = Math.floor((newY - r) / CELL);
+            const bottomCell = Math.floor((newY + r) / CELL);
+            
+            for (let gy = topCell; gy <= bottomCell; gy++) {
+                for (let gx = leftCell; gx <= rightCell; gx++) {
+                    const obs = getObstacle(gx * CELL + CELL/2, gy * CELL + CELL/2);
+                    if (!obs) continue;
+                    
+                    const nearX = Math.max(obs.x, Math.min(newX, obs.x + obs.w));
+                    const nearY = Math.max(obs.y, Math.min(newY, obs.y + obs.h));
+                    const dx = newX - nearX;
+                    const dy = newY - nearY;
+                    const dist = Math.hypot(dx, dy);
+                    
+                    if (dist < r) return false;
+                }
+            }
+            return true;
+        }
+
+        // ----- движение с коллизиями -----
+        function movePlayer(dx, dy) {
+            if (dx === 0 && dy === 0) return;
+            
+            // X
+            let newX = player.x + dx;
+            if (canMoveTo(newX, player.y, player.radius)) {
+                player.x = newX;
+            }
+            
+            // Y
+            let newY = player.y + dy;
+            if (canMoveTo(player.x, newY, player.radius)) {
+                player.y = newY;
+            }
+        }
+
+        // ----- ОБРАБОТЧИКИ ДЖОЙСТИКА (исправлено) -----
+        function handleStart(e) {
+            e.preventDefault();
+            isDragging = true;
+            handleMove(e); // сразу обновить позицию
+        }
+
+        function handleMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const rect = joystickDiv.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let clientX, clientY;
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            // дельта от центра
+            let dx = clientX - centerX;
+            let dy = clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+            
+            // ограничиваем расстояние
+            if (dist > maxDist) {
+                dx = (dx / dist) * maxDist;
+                dy = (dy / dist) * maxDist;
+            }
+            
+            // двигаем кружок джойстика
+            thumbDiv.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            
+            // задаем вектор (нормализованный)
+            if (dist > 8) { // мертвая зона
+                stickVec.x = dx / maxDist;
+                stickVec.y = dy / maxDist;
+            } else {
+                stickVec.x = 0;
+                stickVec.y = 0;
+            }
+        }
+
+        function handleEnd(e) {
+            e.preventDefault();
+            isDragging = false;
+            thumbDiv.style.transform = 'translate(-50%, -50%)';
+            stickVec.x = 0;
+            stickVec.y = 0;
+        }
+
+        // навешиваем события
+        joystickDiv.addEventListener('mousedown', handleStart);
+        joystickDiv.addEventListener('mousemove', handleMove);
+        joystickDiv.addEventListener('mouseup', handleEnd);
+        joystickDiv.addEventListener('mouseleave', handleEnd);
+        
+        joystickDiv.addEventListener('touchstart', handleStart, { passive: false });
+        joystickDiv.addEventListener('touchmove', handleMove, { passive: false });
+        joystickDiv.addEventListener('touchend', handleEnd);
+        joystickDiv.addEventListener('touchcancel', handleEnd);
+        
+        joystickDiv.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // ----- отрисовка (камера следует за игроком) -----
+        function draw() {
+            ctx.clearRect(0, 0, 500, 500);
+            
+            const camX = player.x - 250;
+            const camY = player.y - 250;
+            
+            // препятствия
+            ctx.fillStyle = '#7c6b58';
+            ctx.shadowColor = '#4d3e2e';
+            ctx.shadowBlur = 16;
+            
+            const startGX = Math.floor((camX - CELL) / CELL);
+            const endGX = Math.floor((camX + 500 + CELL) / CELL);
+            const startGY = Math.floor((camY - CELL) / CELL);
+            const endGY = Math.floor((camY + 500 + CELL) / CELL);
+            
+            for (let gy = startGY; gy <= endGY; gy++) {
+                for (let gx = startGX; gx <= endGX; gx++) {
+                    const obs = getObstacle(gx * CELL + CELL/2, gy * CELL + CELL/2);
+                    if (!obs) continue;
+                    
+                    ctx.fillRect(obs.x - camX, obs.y - camY, obs.w, obs.h);
+                }
+            }
+            
+            // игрок (всегда в центре)
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = '#7fa9ff';
+            ctx.beginPath();
+            ctx.arc(250, 250, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#dceeff';
+            ctx.fill();
+            ctx.shadowBlur = 8;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            
+            // зрачки (чтобы было видно что двигается)
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(240, 240, 4.5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#1a1f2a';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(260, 240, 4.5, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(242, 238, 2, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(262, 238, 2, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // ----- игровой цикл -----
+        function gameLoop() {
+            movePlayer(stickVec.x * SPEED, stickVec.y * SPEED);
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        gameLoop();
+    })();
 </script>
 </body>
 </html>
