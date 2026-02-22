@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>кружок · бегающие глаза</title>
+    <title>каменный лес · точка направления</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
             -webkit-tap-highlight-color: transparent;
         }
         body {
-            background: #0a0e17;
+            background: #1a2a1a;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -21,7 +21,7 @@
             touch-action: none;
         }
         .game {
-            background: #141e2e;
+            background: #2a3a2a;
             border-radius: 52px;
             padding: 26px;
             box-shadow: 0 35px 50px #000000e0;
@@ -30,9 +30,9 @@
             display: block;
             width: min(420px, 85vw);
             height: min(420px, 85vw);
-            background: #1f2a40;
+            background: #7cb57c;
             border-radius: 42px;
-            box-shadow: inset 0 0 0 4px #31476b;
+            box-shadow: inset 0 0 0 4px #4a7a4a;
         }
         .pad {
             display: flex;
@@ -42,9 +42,9 @@
         .joystick {
             width: min(140px, 28vw);
             height: min(140px, 28vw);
-            background: #1d2742;
+            background: #3a4a3a;
             border-radius: 999px;
-            box-shadow: 0 10px 0 #121a30, inset 0 -5px 16px #2f3f6a;
+            box-shadow: 0 10px 0 #1a2a1a, inset 0 -5px 16px #5a7a5a;
             position: relative;
             touch-action: none;
         }
@@ -52,12 +52,12 @@
             position: absolute;
             width: 48px;
             height: 48px;
-            background: #b6d0ff;
+            background: #7cb57c;
             border-radius: 999px;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 9px 18px #1f2750, 0 0 0 5px #304b82;
+            box-shadow: 0 9px 18px #1a2a1a, 0 0 0 5px #4a7a4a;
             transition: transform 0.02s;
             will-change: transform;
         }
@@ -84,9 +84,7 @@
         const player = {
             x: 0,
             y: 0,
-            r: 20,
-            lookX: 0,
-            lookY: -1
+            r: 18
         };
 
         // джойстик
@@ -95,21 +93,46 @@
         const vec = { x: 0, y: 0 };
         const SPEED = 5;
 
-        // МНОГО ПРЕПЯТСТВИЙ по всей карте
-        const obstacles = [];
-        
-        // генерируем 60 препятствий по всей карте
-        for (let i = 0; i < 60; i++) {
-            let x = (Math.random() - 0.5) * 2000;
-            let y = (Math.random() - 0.5) * 2000;
+        // ФИКСИРОВАННЫЕ ПРЕПЯТСТВИЯ (всегда на одних местах)
+        const obstacles = [
+            // группа слева
+            { x: -450, y: -320, w: 70, h: 70 },
+            { x: -520, y: 180, w: 85, h: 85 },
+            { x: -380, y: 450, w: 60, h: 60 },
+            { x: -600, y: -100, w: 90, h: 90 },
             
-            obstacles.push({
-                x: x - 30,
-                y: y - 30,
-                w: 60 + Math.random() * 50,
-                h: 60 + Math.random() * 50
-            });
-        }
+            // группа справа
+            { x: 400, y: -420, w: 75, h: 75 },
+            { x: 550, y: -200, w: 100, h: 100 },
+            { x: 480, y: 150, w: 65, h: 65 },
+            { x: 600, y: 350, w: 80, h: 80 },
+            
+            // группа сверху
+            { x: -200, y: -550, w: 95, h: 95 },
+            { x: 150, y: -600, w: 70, h: 70 },
+            { x: 350, y: -480, w: 85, h: 85 },
+            
+            // группа снизу
+            { x: -250, y: 550, w: 80, h: 80 },
+            { x: 200, y: 520, w: 90, h: 90 },
+            { x: 450, y: 600, w: 75, h: 75 },
+            
+            // центральная группа (подальше от старта)
+            { x: -150, y: -150, w: 60, h: 60 },
+            { x: 180, y: 180, w: 70, h: 70 },
+            { x: -200, y: 200, w: 65, h: 65 },
+            { x: 220, y: -180, w: 80, h: 80 },
+            
+            // дополнительные камни
+            { x: -400, y: -400, w: 100, h: 100 },
+            { x: 500, y: -500, w: 90, h: 90 },
+            { x: -500, y: 500, w: 85, h: 85 },
+            { x: 400, y: 400, w: 95, h: 95 },
+            { x: -100, y: -400, w: 70, h: 70 },
+            { x: 300, y: -300, w: 80, h: 80 },
+            { x: -300, y: 300, w: 75, h: 75 },
+            { x: 100, y: 400, w: 90, h: 90 }
+        ];
 
         // проверка столкновения
         function canMoveTo(nx, ny, r) {
@@ -125,12 +148,6 @@
         // движение со скольжением
         function move(dx, dy) {
             if (dx === 0 && dy === 0) return;
-            
-            // обновляем направление взгляда
-            if (Math.hypot(dx, dy) > 0.1) {
-                player.lookX = dx;
-                player.lookY = dy;
-            }
             
             if (canMoveTo(player.x + dx, player.y + dy, player.r)) {
                 player.x += dx;
@@ -218,9 +235,13 @@
             const camX = player.x - 300;
             const camY = player.y - 300;
             
-            // стены
-            ctx.fillStyle = '#7d6b55';
-            ctx.shadowColor = '#4a3f30';
+            // травяной фон
+            ctx.fillStyle = '#7cb57c';
+            ctx.fillRect(0, 0, 600, 600);
+            
+            // камни (серые)
+            ctx.fillStyle = '#8a7f7a';
+            ctx.shadowColor = '#5a4f4a';
             ctx.shadowBlur = 18;
             
             for (let ob of obstacles) {
@@ -231,88 +252,48 @@
                 }
             }
             
-            // нормализуем направление взгляда
-            const lookLen = Math.hypot(player.lookX, player.lookY);
-            let normX = 0, normY = -1;
-            
-            if (lookLen > 0.1) {
-                normX = player.lookX / lookLen;
-                normY = player.lookY / lookLen;
-            }
-            
-            // базовые позиции глаз (центры глазных яблок)
-            const leftEyeX = 285;
-            const leftEyeY = 285;
-            const rightEyeX = 315;
-            const rightEyeY = 285;
-            
-            // смещение глаз в сторону движения (целые глазные яблоки двигаются)
-            const eyeOffset = 8;
-            const leftEyeOffsetX = normX * eyeOffset;
-            const leftEyeOffsetY = normY * eyeOffset;
-            const rightEyeOffsetX = normX * eyeOffset;
-            const rightEyeOffsetY = normY * eyeOffset;
-            
-            // рисуем игрока (прозрачный фон, чтобы глаза были видны)
+            // игрок (голубой)
             ctx.shadowBlur = 28;
-            ctx.shadowColor = '#7fa3f0';
+            ctx.shadowColor = '#4aa0c0';
             ctx.beginPath();
             ctx.arc(300, 300, player.r, 0, Math.PI*2);
-            ctx.fillStyle = '#dceeff';
+            ctx.fillStyle = '#7fd4ff';
             ctx.fill();
             ctx.shadowBlur = 10;
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 3;
             ctx.stroke();
             
-            // белки глаз (двигаются целиком)
-            ctx.shadowBlur = 0;
+            // точка направления (появляется только при движении)
+            const moving = Math.hypot(vec.x, vec.y) > 0.1;
             
-            // левый глаз (белок)
-            ctx.beginPath();
-            ctx.arc(leftEyeX + leftEyeOffsetX, leftEyeY + leftEyeOffsetY, 7, 0, 2*Math.PI);
-            ctx.fillStyle = '#ffffff';
-            ctx.fill();
-            ctx.strokeStyle = '#a0b0c0';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            
-            // правый глаз (белок)
-            ctx.beginPath();
-            ctx.arc(rightEyeX + rightEyeOffsetX, rightEyeY + rightEyeOffsetY, 7, 0, 2*Math.PI);
-            ctx.fillStyle = '#ffffff';
-            ctx.fill();
-            ctx.strokeStyle = '#a0b0c0';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            
-            // зрачки (чуть дополнительного смещения для живости)
-            const pupilOffset = 3;
-            const pupilLeftX = leftEyeX + leftEyeOffsetX + normX * pupilOffset;
-            const pupilLeftY = leftEyeY + leftEyeOffsetY + normY * pupilOffset;
-            const pupilRightX = rightEyeX + rightEyeOffsetX + normX * pupilOffset;
-            const pupilRightY = rightEyeY + rightEyeOffsetY + normY * pupilOffset;
-            
-            ctx.beginPath();
-            ctx.arc(pupilLeftX, pupilLeftY, 3.5, 0, 2*Math.PI);
-            ctx.fillStyle = '#1a1f2e';
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(pupilRightX, pupilRightY, 3.5, 0, 2*Math.PI);
-            ctx.fillStyle = '#1a1f2e';
-            ctx.fill();
-            
-            // блики
-            ctx.beginPath();
-            ctx.arc(pupilLeftX - 1, pupilLeftY - 1, 1.2, 0, 2*Math.PI);
-            ctx.fillStyle = '#ffffff';
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(pupilRightX - 1, pupilRightY - 1, 1.2, 0, 2*Math.PI);
-            ctx.fillStyle = '#ffffff';
-            ctx.fill();
+            if (moving) {
+                // нормализуем вектор
+                const len = Math.hypot(vec.x, vec.y);
+                const dirX = vec.x / len;
+                const dirY = vec.y / len;
+                
+                // точка перед игроком
+                const dotX = 300 + dirX * (player.r + 12);
+                const dotY = 300 + dirY * (player.r + 12);
+                
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(dotX, dotY, 6, 0, Math.PI*2);
+                ctx.fillStyle = '#ffffb0';
+                ctx.fill();
+                ctx.strokeStyle = '#d0d070';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // маленький блик
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(dotX - 1.5, dotY - 1.5, 2, 0, Math.PI*2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+            }
         }
 
         // цикл
