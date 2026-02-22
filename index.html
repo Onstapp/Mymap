@@ -36,10 +36,15 @@
         }
         .controls {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             margin-top: 20px;
             gap: 15px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            order: 1;
         }
         .action-btn {
             width: min(70px, 15vw);
@@ -61,9 +66,7 @@
             box-shadow: 0 3px 0 #1a2a1a, inset 0 -3px 10px #5a7a5a;
         }
         .joystick-wrapper {
-            flex: 1;
-            display: flex;
-            justify-content: center;
+            order: 2;
         }
         .joystick {
             width: min(140px, 28vw);
@@ -98,8 +101,8 @@
         }
         .counter {
             position: absolute;
-            bottom: 120px;
-            right: 45px;
+            top: 10px;
+            right: 10px;
             color: #d0e0d0;
             font-family: monospace;
             font-size: 14px;
@@ -123,13 +126,15 @@
         <canvas id="world" width="600" height="600"></canvas>
     </div>
     <div class="controls">
-        <div class="action-btn" id="deleteBtn">✕</div>
+        <div class="action-buttons">
+            <div class="action-btn" id="deleteBtn">✕</div>
+            <div class="action-btn" id="createBtn"></div>
+        </div>
         <div class="joystick-wrapper">
             <div class="joystick" id="joystick">
                 <div class="thumb" id="thumb"></div>
             </div>
         </div>
-        <div class="action-btn" id="createBtn"></div>
     </div>
 </div>
 
@@ -241,11 +246,10 @@
             }
         }
 
-        // создание препятствия (теперь не требует касания джойстика)
+        // создание препятствия
         function createObstacle() {
             if (playerObstacles.length >= MAX_PLAYER_OBSTACLES) return;
             
-            // используем последнее известное направление
             const len = Math.hypot(lastDir.x, lastDir.y);
             if (len < 0.1) return;
             
@@ -293,15 +297,12 @@
             const dirX = lastDir.x / len;
             const dirY = lastDir.y / len;
             
-            // позиция точки направления
-            const dotDist = 12 + 25; // максимальное расстояние
+            const dotDist = 12 + 25;
             const dotX = player.x + dirX * (player.r + dotDist);
             const dotY = player.y + dirY * (player.r + dotDist);
             
-            // ищем препятствие под точкой
             for (let i = 0; i < playerObstacles.length; i++) {
                 const ob = playerObstacles[i];
-                // проверяем, попадает ли точка в препятствие
                 if (dotX >= ob.x && dotX <= ob.x + ob.w &&
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     playerObstacles.splice(i, 1);
@@ -359,8 +360,6 @@
             
             thumbDiv.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
             
-            // ВСЕГДА обновляем вектор, даже при маленьком расстоянии
-            // просто он будет маленьким, но не нулевым
             if (dist > 0.1) {
                 vec.x = dx / maxDist;
                 vec.y = dy / maxDist;
@@ -470,12 +469,11 @@
                 const dirX = dirToUse.x / len;
                 const dirY = dirToUse.y / len;
                 
-                // расстояние точки зависит от силы нажатия
                 let distFromPlayer;
                 if (drag) {
                     distFromPlayer = 12 + (len * 25);
                 } else {
-                    distFromPlayer = 12 + 25; // максимальное, когда не двигаемся
+                    distFromPlayer = 12 + 25;
                 }
                 
                 const dotX = 300 + dirX * (player.r + distFromPlayer);
@@ -500,10 +498,8 @@
 
         function loop() {
             if (drag) {
-                // двигаемся с учетом силы нажатия (даже если вектор маленький)
                 move(vec.x * SPEED, vec.y * SPEED);
             }
-            // если не drag - не двигаемся
             updateCoords();
             draw();
             requestAnimationFrame(loop);
