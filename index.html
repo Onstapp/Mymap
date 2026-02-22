@@ -360,6 +360,19 @@
             padding: 4px 8px;
             border-radius: 10px;
         }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #a0d0a0;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
@@ -453,8 +466,25 @@
             colorGrid.appendChild(div);
         });
         
-        // PeerJS настройки
-        const peer = new Peer();
+        // PeerJS настройки с правильными серверами
+        const peerOptions = {
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
+            secure: true,
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                    { urls: 'stun:stun.ekiga.net' }
+                ]
+            }
+        };
+        
+        let peer = null;
         let conn = null;
         let players = new Map();
         let playerObstacles = [];
@@ -533,13 +563,23 @@
             if (!validateName(name)) return;
             
             myName = name;
-            isHost = true;
+            
+            // Показываем загрузку
+            document.getElementById('createRoomBtn').innerHTML = 'СОЗДАНИЕ <span class="loading"></span>';
+            document.getElementById('createRoomBtn').disabled = true;
+            
+            // Создаем новый Peer
+            peer = new Peer(peerOptions);
             
             peer.on('open', (id) => {
                 roomId = id;
+                isHost = true;
+                
+                // Показываем ID комнаты
                 roomIdDisplay.style.display = 'block';
                 roomIdDisplay.textContent = `КОМНАТА: ${roomId}`;
                 
+                // Добавляем себя
                 players.set(myId, {
                     id: myId,
                     name: myName,
@@ -550,25 +590,32 @@
                 });
                 
                 showGame();
+                
+                // Слушаем подключения
+                peer.on('connection', (connection) => {
+                    conn = connection;
+                    
+                    conn.on('data', (data) => {
+                        handleData(data);
+                    });
+                    
+                    conn.on('close', () => {
+                        connectionStatus.textContent = 'Игрок отключился';
+                    });
+                    
+                    // Отправляем текущее состояние
+                    conn.send({
+                        type: 'init',
+                        players: Array.from(players.values()),
+                        obstacles: playerObstacles
+                    });
+                });
             });
             
-            peer.on('connection', (connection) => {
-                conn = connection;
-                
-                conn.on('data', (data) => {
-                    handleData(data);
-                });
-                
-                conn.on('close', () => {
-                    connectionStatus.textContent = 'Игрок отключился';
-                });
-                
-                // Отправляем текущее состояние
-                conn.send({
-                    type: 'init',
-                    players: Array.from(players.values()),
-                    obstacles: playerObstacles
-                });
+            peer.on('error', (err) => {
+                document.getElementById('errorMsg').textContent = 'Ошибка: ' + err.type;
+                document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
+                document.getElementById('createRoomBtn').disabled = false;
             });
         };
         
@@ -581,43 +628,56 @@
             
             myName = name;
             
-            conn = peer.connect(id);
+            // Показываем загрузку
+            document.getElementById('joinRoomBtn').innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
+            document.getElementById('joinRoomBtn').disabled = true;
             
-            conn.on('open', () => {
-                roomId = id;
-                isHost = false;
+            // Создаем новый Peer для подключения
+            peer = new Peer(peerOptions);
+            
+            peer.on('open', () => {
+                conn = peer.connect(id);
                 
-                conn.on('data', (data) => {
-                    handleData(data);
-                });
-                
-                conn.on('close', () => {
-                    connectionStatus.textContent = 'Соединение потеряно';
-                });
-                
-                // Отправляем информацию о себе
-                conn.send({
-                    type: 'join',
-                    player: {
+                conn.on('open', () => {
+                    roomId = id;
+                    isHost = false;
+                    
+                    conn.on('data', (data) => {
+                        handleData(data);
+                    });
+                    
+                    conn.on('close', () => {
+                        connectionStatus.textContent = 'Соединение потеряно';
+                    });
+                    
+                    // Отправляем информацию о себе
+                    conn.send({
+                        type: 'join',
+                        player: {
+                            id: myId,
+                            name: myName,
+                            color: selectedColor,
+                            x: 0, y: 0,
+                            lastDir: { x: 0, y: -1 },
+                            r: 18
+                        }
+                    });
+                    
+                    players.set(myId, {
                         id: myId,
                         name: myName,
                         color: selectedColor,
                         x: 0, y: 0,
                         lastDir: { x: 0, y: -1 },
                         r: 18
-                    }
+                    });
                 });
-                
-                players.set(myId, {
-                    id: myId,
-                    name: myName,
-                    color: selectedColor,
-                    x: 0, y: 0,
-                    lastDir: { x: 0, y: -1 },
-                    r: 18
-                });
-                
-                showGame();
+            });
+            
+            peer.on('error', (err) => {
+                document.getElementById('errorMsg').textContent = 'Ошибка подключения';
+                document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
+                document.getElementById('joinRoomBtn').disabled = false;
             });
         };
         
@@ -641,7 +701,7 @@
                     
                 case 'join':
                     players.set(data.player.id, data.player);
-                    if (isHost) {
+                    if (isHost && conn) {
                         conn.send({
                             type: 'playerJoined',
                             player: data.player
@@ -694,13 +754,19 @@
             connectionStatus.textContent = `🟢 Подключено: ${roomId}`;
             updatePlayerList();
             updateCounter();
+            
+            // Сбрасываем кнопки
+            document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
+            document.getElementById('createRoomBtn').disabled = false;
+            document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
+            document.getElementById('joinRoomBtn').disabled = false;
         }
         
         function resetGame() {
             playerObstacles = [];
             players.clear();
             
-            if (isHost) {
+            if (isHost && peer) {
                 // Хост очищает всё
                 players.set(myId, {
                     id: myId,
@@ -714,11 +780,18 @@
             
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'block';
+            roomIdDisplay.style.display = 'none';
             
             player.x = 0;
             player.y = 0;
             lastDir = { x: 0, y: -1 };
             document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
+            
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            conn = null;
         }
         
         exitBtn.onclick = () => {
@@ -739,7 +812,9 @@
             if (code === RESET_CODE) {
                 if (isHost) {
                     // Хост сбрасывает всех
-                    broadcast({ type: 'reset', code: RESET_CODE });
+                    if (conn) {
+                        broadcast({ type: 'reset', code: RESET_CODE });
+                    }
                     resetGame();
                 } else {
                     alert('Только хост может сбросить игру!');
@@ -799,36 +874,42 @@
                 player.x += dx;
                 player.y += dy;
                 
-                broadcast({
-                    type: 'move',
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir: lastDir
-                });
+                if (conn && conn.open) {
+                    broadcast({
+                        type: 'move',
+                        id: myId,
+                        x: player.x,
+                        y: player.y,
+                        lastDir: lastDir
+                    });
+                }
                 return;
             }
             
             if (canMoveTo(player.x + dx, player.y, player.r)) {
                 player.x += dx;
-                broadcast({
-                    type: 'move',
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir: lastDir
-                });
+                if (conn && conn.open) {
+                    broadcast({
+                        type: 'move',
+                        id: myId,
+                        x: player.x,
+                        y: player.y,
+                        lastDir: lastDir
+                    });
+                }
             }
             
             if (canMoveTo(player.x, player.y + dy, player.r)) {
                 player.y += dy;
-                broadcast({
-                    type: 'move',
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir: lastDir
-                });
+                if (conn && conn.open) {
+                    broadcast({
+                        type: 'move',
+                        id: myId,
+                        x: player.x,
+                        y: player.y,
+                        lastDir: lastDir
+                    });
+                }
             }
         }
         
@@ -873,7 +954,9 @@
             };
             
             playerObstacles.push(obstacle);
-            broadcast({ type: 'createObstacle', obstacle });
+            if (conn && conn.open) {
+                broadcast({ type: 'createObstacle', obstacle });
+            }
             updateCounter();
         }
         
@@ -894,7 +977,9 @@
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
                         playerObstacles.splice(i, 1);
-                        broadcast({ type: 'deleteObstacle', index: i });
+                        if (conn && conn.open) {
+                            broadcast({ type: 'deleteObstacle', index: i });
+                        }
                         updateCounter();
                     }
                     return;
