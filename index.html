@@ -36,17 +36,14 @@
         }
         .controls {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
             margin-top: 20px;
-            gap: 15px;
         }
         .action-buttons {
             display: flex;
             gap: 15px;
-            order: 1;
-            flex-direction: row-reverse;
-            margin-right: -20px; /* сдвигаем кнопки левее к краю */
+            margin-left: 10px; /* отступ от левого края */
         }
         .action-btn {
             width: min(70px, 15vw);
@@ -68,7 +65,7 @@
             box-shadow: 0 3px 0 #1a2a1a, inset 0 -3px 10px #5a7a5a;
         }
         .joystick-wrapper {
-            order: 2;
+            margin-right: 10px; /* отступ от правого края */
         }
         .joystick {
             width: min(140px, 28vw);
@@ -103,8 +100,8 @@
         }
         .counter {
             position: absolute;
-            top: 40px;  /* увеличино с 20px до 40px */
-            right: 10px;
+            top: 40px;
+            right: 20px; /* сдвинуто влево на 10px (было 10px) */
             color: #d0e0d0;
             font-family: monospace;
             font-size: 14px;
@@ -114,6 +111,7 @@
             border: 1px solid #5a7a5a;
             border-radius: 12px;
             z-index: 10;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.8); /* тень для читаемости */
         }
         .game-wrapper {
             position: relative;
