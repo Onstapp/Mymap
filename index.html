@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>каменный лес · координаты</title>
+    <title>каменный лес · динамическая точка</title>
     <style>
         * {
             margin: 0;
@@ -297,36 +297,28 @@
                 const dirX = vec.x / len;
                 const dirY = vec.y / len;
                 
-                // точка перед игроком
-                const dotX = 300 + dirX * (player.r + 12);
-                const dotY = 300 + dirY * (player.r + 12);
+                // расстояние точки от игрока зависит от силы нажатия (от 12 до 30 пикселей)
+                const distFromPlayer = 12 + (len * 25);
                 
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#666666';
+                // точка перед игроком
+                const dotX = 300 + dirX * (player.r + distFromPlayer);
+                const dotY = 300 + dirY * (player.r + distFromPlayer);
+                
+                ctx.shadowBlur = 0; // без теней
                 ctx.beginPath();
                 ctx.arc(dotX, dotY, 6, 0, Math.PI*2);
-                ctx.fillStyle = '#a0a0a0';
-                ctx.fill();
-                ctx.strokeStyle = '#707070';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                // маленький блик
-                ctx.shadowBlur = 8;
-                ctx.beginPath();
-                ctx.arc(dotX - 1.5, dotY - 1.5, 2, 0, Math.PI*2);
-                ctx.fillStyle = '#c0c0c0';
+                ctx.fillStyle = '#a0a0a0';  // просто серая без бликов
                 ctx.fill();
             }
 
-            // маленькая отметка центра (0,0) для ориентира
+            // БОЛЬШАЯ ПРОЗРАЧНАЯ БЕЛАЯ ТОЧКА в центре мира (0,0)
             ctx.shadowBlur = 0;
             ctx.beginPath();
-            ctx.arc(300 - player.x, 300 - player.y, 4, 0, 2*Math.PI);
-            ctx.fillStyle = '#fffffff0';
+            ctx.arc(300 - player.x, 300 - player.y, 14, 0, 2*Math.PI); // радиус 14 (было 4)
+            ctx.fillStyle = '#ffffff60'; // полупрозрачный белый
             ctx.fill();
-            ctx.strokeStyle = '#00000060';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#ffffffa0';
+            ctx.lineWidth = 2;
             ctx.stroke();
         }
 
