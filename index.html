@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mymap · мультиплеер</title>
+    <title>Mymap · локальный мультиплеер</title>
     <style>
         * {
             margin: 0;
@@ -113,11 +113,6 @@
             text-align: center;
             margin-top: 15px;
             min-height: 25px;
-        }
-        #playerCount {
-            text-align: center;
-            margin-top: 15px;
-            color: #a0d0a0;
         }
         
         .game {
@@ -248,22 +243,18 @@
             padding: 4px 8px;
             border-radius: 10px;
         }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #a0d0a0;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-            vertical-align: middle;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .player-list {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #a0d0a0;
+            font-size: 12px;
+            background: #1a2a1a80;
+            padding: 4px 8px;
+            border-radius: 10px;
+            max-width: 200px;
         }
     </style>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
     <div id="loginScreen">
@@ -277,7 +268,6 @@
             <div class="color-grid" id="colorGrid"></div>
         </div>
         <button id="startBtn">НАЧАТЬ</button>
-        <div id="playerCount">👥 0 игроков</div>
         <div id="errorMsg"></div>
     </div>
 
@@ -289,7 +279,7 @@
         <div class="game-wrapper">
             <div class="counter" id="counter">0/10</div>
             <canvas id="world" width="600" height="600"></canvas>
-            <div class="connection-info" id="connectionInfo"></div>
+            <div class="player-list" id="playerList"></div>
         </div>
         <div class="controls">
             <div class="action-buttons">
@@ -329,15 +319,38 @@
             colorGrid.appendChild(div);
         });
         
-        // WebSocket подключение
-        const socket = io('https://socket-multiplayer-game.glitch.me', {
-            transports: ['websocket'],
-            reconnectionAttempts: 5
-        });
-        
+        // Локальное хранилище для мультиплеера
         let players = new Map();
         let playerObstacles = [];
         const MAX_PLAYER_OBSTACLES = 10;
+        
+        // Загружаем сохраненные данные
+        function loadGameData() {
+            const saved = localStorage.getItem('mymap_game');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.players) {
+                        data.players.forEach(p => players.set(p.id, p));
+                    }
+                    if (data.obstacles) {
+                        playerObstacles = data.obstacles;
+                    }
+                } catch(e) {}
+            }
+        }
+        
+        // Сохраняем данные
+        function saveGameData() {
+            const data = {
+                players: Array.from(players.values()),
+                obstacles: playerObstacles
+            };
+            localStorage.setItem('mymap_game', JSON.stringify(data));
+        }
+        
+        // Загружаем при старте
+        loadGameData();
         
         // Статические препятствия
         const staticObstacles = [];
@@ -391,7 +404,7 @@
         const createBtn = document.getElementById('createBtn');
         const deleteBtn = document.getElementById('deleteBtn');
         const counterDiv = document.getElementById('counter');
-        const connectionInfo = document.getElementById('connectionInfo');
+        const playerListDiv = document.getElementById('playerList');
         const exitBtn = document.getElementById('exitBtn');
         
         function startGame() {
@@ -404,83 +417,48 @@
             
             myName = name;
             
-            document.getElementById('startBtn').innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
-            document.getElementById('startBtn').disabled = true;
-            
-            // Отправляем регистрацию
-            socket.emit('register', {
+            // Добавляем себя в список игроков
+            players.set(myId, {
                 id: myId,
                 name: myName,
-                color: selectedColor
+                color: selectedColor,
+                x: 0,
+                y: 0,
+                lastDir: { x: 0, y: -1 },
+                r: 18
             });
-        }
-        
-        // Сокет события
-        socket.on('connect', () => {
-            console.log('Connected to server');
-        });
-        
-        socket.on('init', (data) => {
-            players.clear();
-            data.players.forEach(p => players.set(p.id, p));
-            playerObstacles = data.obstacles || [];
+            
+            saveGameData();
             
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
-            updatePlayerCount();
+            updatePlayerList();
             updateCounter();
-        });
-        
-        socket.on('playerJoined', (playerData) => {
-            players.set(playerData.id, playerData);
-            updatePlayerCount();
-        });
-        
-        socket.on('playerMoved', (data) => {
-            const p = players.get(data.id);
-            if (p) {
-                p.x = data.x;
-                p.y = data.y;
-                p.lastDir = data.lastDir;
-            }
-        });
-        
-        socket.on('playerLeft', (id) => {
-            players.delete(id);
-            updatePlayerCount();
-        });
-        
-        socket.on('obstacleCreated', (obstacle) => {
-            playerObstacles.push(obstacle);
-            updateCounter();
-        });
-        
-        socket.on('obstacleDeleted', (index) => {
-            playerObstacles.splice(index, 1);
-            updateCounter();
-        });
-        
-        socket.on('error', (msg) => {
-            document.getElementById('errorMsg').textContent = msg;
-            document.getElementById('startBtn').innerHTML = 'НАЧАТЬ';
-            document.getElementById('startBtn').disabled = false;
-        });
+        }
         
         document.getElementById('startBtn').onclick = startGame;
         
         // Выход в меню
         exitBtn.onclick = () => {
+            // Удаляем себя из списка игроков
+            players.delete(myId);
+            saveGameData();
+            
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'block';
-            document.getElementById('startBtn').innerHTML = 'НАЧАТЬ';
-            document.getElementById('startBtn').disabled = false;
+            
             // Очищаем данные
-            players.clear();
-            playerObstacles = [];
             player.x = 0;
             player.y = 0;
             lastDir = { x: 0, y: -1 };
         };
+        
+        function updatePlayerList() {
+            const list = Array.from(players.values())
+                .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}`)
+                .join('<br>');
+            playerListDiv.innerHTML = `👥 Игроки:<br>${list}`;
+        }
         
         function canMoveTo(nx, ny, r) {
             for (let ob of staticObstacles) {
@@ -513,34 +491,37 @@
                 player.x += dx;
                 player.y += dy;
                 
-                // Отправляем позицию на сервер
-                socket.emit('move', {
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir: lastDir
-                });
+                // Обновляем свою позицию в общем списке
+                const p = players.get(myId);
+                if (p) {
+                    p.x = player.x;
+                    p.y = player.y;
+                    p.lastDir = lastDir;
+                    saveGameData();
+                }
                 return;
             }
             
             if (canMoveTo(player.x + dx, player.y, player.r)) {
                 player.x += dx;
-                socket.emit('move', {
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir: lastDir
-                });
+                const p = players.get(myId);
+                if (p) {
+                    p.x = player.x;
+                    p.y = player.y;
+                    p.lastDir = lastDir;
+                    saveGameData();
+                }
             }
             
             if (canMoveTo(player.x, player.y + dy, player.r)) {
                 player.y += dy;
-                socket.emit('move', {
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir: lastDir
-                });
+                const p = players.get(myId);
+                if (p) {
+                    p.x = player.x;
+                    p.y = player.y;
+                    p.lastDir = lastDir;
+                    saveGameData();
+                }
             }
         }
         
@@ -578,11 +559,15 @@
                 if (d < player.r + w/2) return;
             }
             
-            socket.emit('createObstacle', {
+            const obstacle = {
                 playerId: myId,
                 playerColor: selectedColor,
                 x, y, w, h
-            });
+            };
+            
+            playerObstacles.push(obstacle);
+            saveGameData();
+            updateCounter();
         }
         
         function deleteObstacleAtDot() {
@@ -601,7 +586,9 @@
                 if (dotX >= ob.x && dotX <= ob.x + ob.w &&
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
-                        socket.emit('deleteObstacle', { index: i });
+                        playerObstacles.splice(i, 1);
+                        saveGameData();
+                        updateCounter();
                     }
                     return;
                 }
@@ -619,14 +606,6 @@
             const x = Math.round(player.x);
             const y = Math.round(player.y);
             coordsDiv.textContent = `X: ${x}  |  Y: ${y}`;
-        }
-        
-        function updatePlayerCount() {
-            const count = players.size;
-            document.getElementById('playerCount').textContent = `👥 ${count} игроков`;
-            if (document.getElementById('gameScreen').style.display === 'block') {
-                connectionInfo.textContent = `👥 ${count} игроков`;
-            }
         }
         
         function updateCounter() {
@@ -860,7 +839,14 @@
             ctx.strokeStyle = '#ffffffa0';
             ctx.lineWidth = 2;
             ctx.stroke();
+            
+            updatePlayerList();
         }
+        
+        // Периодически загружаем обновления от других игроков
+        setInterval(() => {
+            loadGameData();
+        }, 500);
         
         function loop() {
             if (drag) {
