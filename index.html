@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>каменный лес · динамическая точка</title>
+    <title>каменный лес · постройка стен</title>
     <style>
         * {
             margin: 0;
@@ -34,10 +34,36 @@
             border-radius: 42px;
             box-shadow: inset 0 0 0 4px #4a7a4a;
         }
-        .pad {
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            gap: 15px;
+        }
+        .action-btn {
+            width: min(70px, 15vw);
+            height: min(70px, 15vw);
+            border-radius: 30px;
+            background: #3a4a3a;
+            box-shadow: 0 8px 0 #1a2a1a, inset 0 -3px 10px #5a7a5a;
             display: flex;
             justify-content: center;
-            margin-top: 24px;
+            align-items: center;
+            font-size: 28px;
+            color: #d0e0d0;
+            cursor: pointer;
+            touch-action: none;
+            transition: 0.05s linear;
+        }
+        .action-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 3px 0 #1a2a1a, inset 0 -3px 10px #5a7a5a;
+        }
+        .joystick-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
         }
         .joystick {
             width: min(140px, 28vw);
@@ -70,16 +96,41 @@
             text-shadow: 2px 2px 0 #1a2a1a;
             letter-spacing: 2px;
         }
+        .counter {
+            position: absolute;
+            top: 45px;
+            right: 55px;
+            background: #2a3a2a;
+            color: #d0e0d0;
+            font-family: monospace;
+            font-size: 22px;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 30px;
+            box-shadow: 0 5px 0 #1a2a1a;
+            border: 2px solid #4a7a4a;
+            z-index: 10;
+        }
+        .game-wrapper {
+            position: relative;
+        }
     </style>
 </head>
 <body>
 <div class="game">
-    <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
-    <canvas id="world" width="600" height="600"></canvas>
-    <div class="pad">
-        <div class="joystick" id="joystick">
-            <div class="thumb" id="thumb"></div>
+    <div class="game-wrapper">
+        <div class="counter" id="counter">0/10</div>
+        <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
+        <canvas id="world" width="600" height="600"></canvas>
+    </div>
+    <div class="controls">
+        <div class="action-btn" id="deleteBtn">🗑️</div>
+        <div class="joystick-wrapper">
+            <div class="joystick" id="joystick">
+                <div class="thumb" id="thumb"></div>
+            </div>
         </div>
+        <div class="action-btn" id="createBtn">➕</div>
     </div>
 </div>
 
@@ -90,6 +141,9 @@
         const joyDiv = document.getElementById('joystick');
         const thumbDiv = document.getElementById('thumb');
         const coordsDiv = document.getElementById('coordsDisplay');
+        const createBtn = document.getElementById('createBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const counterDiv = document.getElementById('counter');
 
         // игрок СТАРТУЕТ В (0, 0)
         const player = {
@@ -104,61 +158,84 @@
         const vec = { x: 0, y: 0 };
         const SPEED = 5;
 
-        // ФИКСИРОВАННЫЕ ПРЕПЯТСТВИЯ
+        // ФИКСИРОВАННЫЕ ПРЕПЯТСТВИЯ (темнее)
         const obstacles = [
             // группа слева
-            { x: -450, y: -320, w: 70, h: 70 },
-            { x: -520, y: 180, w: 85, h: 85 },
-            { x: -380, y: 450, w: 60, h: 60 },
-            { x: -600, y: -100, w: 90, h: 90 },
+            { x: -450, y: -320, w: 70, h: 70, type: 'stone' },
+            { x: -520, y: 180, w: 85, h: 85, type: 'stone' },
+            { x: -380, y: 450, w: 60, h: 60, type: 'stone' },
+            { x: -600, y: -100, w: 90, h: 90, type: 'stone' },
             
             // группа справа
-            { x: 400, y: -420, w: 75, h: 75 },
-            { x: 550, y: -200, w: 100, h: 100 },
-            { x: 480, y: 150, w: 65, h: 65 },
-            { x: 600, y: 350, w: 80, h: 80 },
+            { x: 400, y: -420, w: 75, h: 75, type: 'stone' },
+            { x: 550, y: -200, w: 100, h: 100, type: 'stone' },
+            { x: 480, y: 150, w: 65, h: 65, type: 'stone' },
+            { x: 600, y: 350, w: 80, h: 80, type: 'stone' },
             
             // группа сверху
-            { x: -200, y: -550, w: 95, h: 95 },
-            { x: 150, y: -600, w: 70, h: 70 },
-            { x: 350, y: -480, w: 85, h: 85 },
+            { x: -200, y: -550, w: 95, h: 95, type: 'stone' },
+            { x: 150, y: -600, w: 70, h: 70, type: 'stone' },
+            { x: 350, y: -480, w: 85, h: 85, type: 'stone' },
             
             // группа снизу
-            { x: -250, y: 550, w: 80, h: 80 },
-            { x: 200, y: 520, w: 90, h: 90 },
-            { x: 450, y: 600, w: 75, h: 75 },
+            { x: -250, y: 550, w: 80, h: 80, type: 'stone' },
+            { x: 200, y: 520, w: 90, h: 90, type: 'stone' },
+            { x: 450, y: 600, w: 75, h: 75, type: 'stone' },
             
             // центральная группа (подальше от старта)
-            { x: -150, y: -150, w: 60, h: 60 },
-            { x: 180, y: 180, w: 70, h: 70 },
-            { x: -200, y: 200, w: 65, h: 65 },
-            { x: 220, y: -180, w: 80, h: 80 },
+            { x: -150, y: -150, w: 60, h: 60, type: 'stone' },
+            { x: 180, y: 180, w: 70, h: 70, type: 'stone' },
+            { x: -200, y: 200, w: 65, h: 65, type: 'stone' },
+            { x: 220, y: -180, w: 80, h: 80, type: 'stone' },
             
             // дополнительные камни
-            { x: -400, y: -400, w: 100, h: 100 },
-            { x: 500, y: -500, w: 90, h: 90 },
-            { x: -500, y: 500, w: 85, h: 85 },
-            { x: 400, y: 400, w: 95, h: 95 },
-            { x: -100, y: -400, w: 70, h: 70 },
-            { x: 300, y: -300, w: 80, h: 80 },
-            { x: -300, y: 300, w: 75, h: 75 },
-            { x: 100, y: 400, w: 90, h: 90 },
+            { x: -400, y: -400, w: 100, h: 100, type: 'stone' },
+            { x: 500, y: -500, w: 90, h: 90, type: 'stone' },
+            { x: -500, y: 500, w: 85, h: 85, type: 'stone' },
+            { x: 400, y: 400, w: 95, h: 95, type: 'stone' },
+            { x: -100, y: -400, w: 70, h: 70, type: 'stone' },
+            { x: 300, y: -300, w: 80, h: 80, type: 'stone' },
+            { x: -300, y: 300, w: 75, h: 75, type: 'stone' },
+            { x: 100, y: 400, w: 90, h: 90, type: 'stone' },
             
             // еще камни для разнообразия
-            { x: -700, y: -200, w: 85, h: 85 },
-            { x: 700, y: 200, w: 95, h: 95 },
-            { x: -650, y: 650, w: 80, h: 80 },
-            { x: 650, y: -650, w: 90, h: 90 }
+            { x: -700, y: -200, w: 85, h: 85, type: 'stone' },
+            { x: 700, y: 200, w: 95, h: 95, type: 'stone' },
+            { x: -650, y: 650, w: 80, h: 80, type: 'stone' },
+            { x: 650, y: -650, w: 90, h: 90, type: 'stone' },
+            { x: -800, y: 0, w: 75, h: 75, type: 'stone' },
+            { x: 800, y: 100, w: 85, h: 85, type: 'stone' },
+            { x: 0, y: -800, w: 95, h: 95, type: 'stone' },
+            { x: 100, y: 800, w: 80, h: 80, type: 'stone' }
         ];
 
-        // проверка столкновения
+        // созданные игроком препятствия (голубые)
+        let playerObstacles = [];
+        const MAX_PLAYER_OBSTACLES = 10;
+
+        // обновление счетчика
+        function updateCounter() {
+            counterDiv.textContent = `${playerObstacles.length}/${MAX_PLAYER_OBSTACLES}`;
+        }
+
+        // проверка столкновения со всеми препятствиями (и каменными, и голубыми)
         function canMoveTo(nx, ny, r) {
+            // проверка каменных препятствий
             for (let ob of obstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
                 const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
                 const d = Math.hypot(nx - nearX, ny - nearY);
                 if (d < r) return false;
             }
+            
+            // проверка созданных игроком препятствий
+            for (let ob of playerObstacles) {
+                const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
+                const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
+                const d = Math.hypot(nx - nearX, ny - nearY);
+                if (d < r) return false;
+            }
+            
             return true;
         }
 
@@ -179,6 +256,76 @@
             if (canMoveTo(player.x, player.y + dy, player.r)) {
                 player.y += dy;
             }
+        }
+
+        // создание нового препятствия
+        function createObstacle() {
+            // проверяем, двигается ли игрок (касается ли джойстика)
+            if (!drag) return;
+            
+            // проверяем лимит
+            if (playerObstacles.length >= MAX_PLAYER_OBSTACLES) return;
+            
+            // позиция перед игроком (куда он смотрит)
+            const len = Math.hypot(vec.x, vec.y);
+            if (len < 0.1) return; // не двигается
+            
+            const dirX = vec.x / len;
+            const dirY = vec.y / len;
+            
+            // создаем препятствие чуть дальше точки направления
+            const createDist = player.r + 40;
+            const newX = player.x + dirX * createDist;
+            const newY = player.y + dirY * createDist;
+            
+            // проверяем, не пересекается ли с другими препятствиями
+            const tempObstacle = {
+                x: newX - 22,
+                y: newY - 22,
+                w: 44,
+                h: 44
+            };
+            
+            // проверка столкновения с камнями
+            for (let ob of obstacles) {
+                if (rectCollide(tempObstacle, ob)) return;
+            }
+            
+            // проверка с другими созданными препятствиями
+            for (let ob of playerObstacles) {
+                if (rectCollide(tempObstacle, ob)) return;
+            }
+            
+            // проверка с игроком
+            const d = Math.hypot(newX - player.x, newY - player.y);
+            if (d < player.r + 22) return;
+            
+            // добавляем
+            playerObstacles.push({
+                x: newX - 22,
+                y: newY - 22,
+                w: 44,
+                h: 44,
+                type: 'player'
+            });
+            
+            updateCounter();
+        }
+
+        // удаление последнего созданного препятствия
+        function deleteLastObstacle() {
+            if (playerObstacles.length > 0) {
+                playerObstacles.pop();
+                updateCounter();
+            }
+        }
+
+        // вспомогательная функция для проверки пересечения прямоугольников
+        function rectCollide(r1, r2) {
+            return !(r2.x >= r1.x + r1.w ||
+                     r2.x + r2.w <= r1.x ||
+                     r2.y >= r1.y + r1.h ||
+                     r2.y + r2.h <= r1.y);
         }
 
         // обновление координат на экране
@@ -240,7 +387,26 @@
             vec.y = 0;
         }
 
-        // события
+        // события для кнопок
+        createBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            createObstacle();
+        });
+        createBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            createObstacle();
+        });
+
+        deleteBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            deleteLastObstacle();
+        });
+        deleteBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            deleteLastObstacle();
+        });
+
+        // события джойстика
         joyDiv.addEventListener('mousedown', onStart);
         joyDiv.addEventListener('mousemove', onMove);
         joyDiv.addEventListener('mouseup', onEnd);
@@ -263,9 +429,9 @@
             ctx.fillStyle = '#7cb57c';
             ctx.fillRect(0, 0, 600, 600);
             
-            // камни (серые)
-            ctx.fillStyle = '#8a7f7a';
-            ctx.shadowColor = '#5a4f4a';
+            // камни (темно-серые)
+            ctx.fillStyle = '#5a4f4a';  // темнее
+            ctx.shadowColor = '#3a2f2a';
             ctx.shadowBlur = 18;
             
             for (let ob of obstacles) {
@@ -273,6 +439,22 @@
                 const screenY = ob.y - camY;
                 if (screenX + ob.w > -50 && screenX < 650 && screenY + ob.h > -50 && screenY < 650) {
                     ctx.fillRect(screenX, screenY, ob.w, ob.h);
+                }
+            }
+            
+            // созданные игроком препятствия (голубые, круглые)
+            ctx.shadowColor = '#2a7080';
+            for (let ob of playerObstacles) {
+                const screenX = ob.x - camX;
+                const screenY = ob.y - camY;
+                if (screenX + ob.w > -50 && screenX < 650 && screenY + ob.h > -50 && screenY < 650) {
+                    ctx.beginPath();
+                    ctx.arc(screenX + ob.w/2, screenY + ob.h/2, ob.w/2, 0, Math.PI*2);
+                    ctx.fillStyle = '#5fa0c0';  // голубой, но темнее чтобы не сливался
+                    ctx.fill();
+                    ctx.strokeStyle = '#3f7080';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                 }
             }
             
@@ -288,34 +470,31 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // СЕРАЯ точка направления (появляется только при движении)
+            // точка направления (темно-серая, без бликов)
             const moving = Math.hypot(vec.x, vec.y) > 0.1;
             
             if (moving) {
-                // нормализуем вектор
                 const len = Math.hypot(vec.x, vec.y);
                 const dirX = vec.x / len;
                 const dirY = vec.y / len;
                 
-                // расстояние точки от игрока зависит от силы нажатия (от 12 до 30 пикселей)
                 const distFromPlayer = 12 + (len * 25);
                 
-                // точка перед игроком
                 const dotX = 300 + dirX * (player.r + distFromPlayer);
                 const dotY = 300 + dirY * (player.r + distFromPlayer);
                 
-                ctx.shadowBlur = 0; // без теней
+                ctx.shadowBlur = 0;
                 ctx.beginPath();
                 ctx.arc(dotX, dotY, 6, 0, Math.PI*2);
-                ctx.fillStyle = '#a0a0a0';  // просто серая без бликов
+                ctx.fillStyle = '#6a6a6a';  // темно-серая
                 ctx.fill();
             }
 
-            // БОЛЬШАЯ ПРОЗРАЧНАЯ БЕЛАЯ ТОЧКА в центре мира (0,0)
+            // большая прозрачная белая точка в центре мира (0,0)
             ctx.shadowBlur = 0;
             ctx.beginPath();
-            ctx.arc(300 - player.x, 300 - player.y, 14, 0, 2*Math.PI); // радиус 14 (было 4)
-            ctx.fillStyle = '#ffffff60'; // полупрозрачный белый
+            ctx.arc(300 - player.x, 300 - player.y, 14, 0, 2*Math.PI);
+            ctx.fillStyle = '#ffffff60';
             ctx.fill();
             ctx.strokeStyle = '#ffffffa0';
             ctx.lineWidth = 2;
@@ -330,6 +509,7 @@
             requestAnimationFrame(loop);
         }
         
+        updateCounter();
         loop();
     })();
 </script>
