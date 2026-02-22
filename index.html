@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mymap · локальный мультиплеер</title>
+    <title>Mymap · по ссылке</title>
     <style>
         * {
             margin: 0;
@@ -89,41 +89,34 @@
         .color-pink { background: #ff88ff; }
         .color-purple { background: #aa44ff; }
         
-        #createRoomBtn, #joinRoomBtn {
+        #createRoomBtn {
             width: 100%;
-            padding: 15px;
+            padding: 18px;
             background: #4a7a4a;
             border: none;
             border-radius: 40px;
             color: #d0e0d0;
-            font-size: 20px;
+            font-size: 24px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 6px 0 #1a2a1a;
-            margin-top: 10px;
+            box-shadow: 0 8px 0 #1a2a1a;
+            margin-top: 20px;
             transition: 0.05s linear;
             font-family: monospace;
         }
-        #createRoomBtn:active, #joinRoomBtn:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #1a2a1a;
+        #createRoomBtn:active {
+            transform: translateY(5px);
+            box-shadow: 0 3px 0 #1a2a1a;
         }
-        #roomCode {
+        #roomLink {
             text-align: center;
             margin: 15px 0;
-            font-size: 32px;
-            font-weight: bold;
-            color: #ffffa0;
+            font-size: 14px;
+            word-break: break-all;
             background: #1a2a1a;
             padding: 15px;
             border-radius: 30px;
-            border: 3px solid #7cb57c;
-            letter-spacing: 5px;
-        }
-        #qrContainer {
-            display: flex;
-            justify-content: center;
-            margin: 15px 0;
+            border: 2px solid #7cb57c;
         }
         #errorMsg {
             color: #ff8888;
@@ -144,16 +137,6 @@
             align-items: center;
             gap: 5px;
             margin-bottom: 12px;
-        }
-        .room-code-header {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ffffa0;
-            background: #1a2a1a;
-            padding: 8px 20px;
-            border-radius: 30px;
-            border: 2px solid #7cb57c;
-            letter-spacing: 3px;
         }
         .header-buttons {
             display: flex;
@@ -378,22 +361,7 @@
             padding: 4px 8px;
             border-radius: 10px;
         }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #a0d0a0;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
     </style>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
 <body>
     <div id="loginScreen">
@@ -407,15 +375,12 @@
             <div class="color-grid" id="colorGrid"></div>
         </div>
         <button id="createRoomBtn">СОЗДАТЬ КОМНАТУ</button>
-        <button id="joinRoomBtn">ПРИСОЕДИНИТЬСЯ</button>
-        <div id="roomCode" style="display: none;"></div>
-        <div id="qrContainer" style="display: none;"></div>
+        <div id="roomLink" style="display: none;"></div>
         <div id="errorMsg"></div>
     </div>
 
     <div class="game" id="gameScreen" style="display: none;">
         <div class="game-header">
-            <div class="room-code-header" id="inGameRoomCode" style="display: none;"></div>
             <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
             <div class="header-buttons">
                 <button class="reset-btn" id="resetBtn">СБРОС</button>
@@ -455,7 +420,7 @@
     </div>
 
     <script>
-        // Генерируем случайное число от 1 до 999
+        // Генерируем случайное число
         function getRandomPlayerNumber() {
             const num = Math.floor(Math.random() * 999) + 1;
             return num.toString().padStart(3, '0');
@@ -472,6 +437,7 @@
         let selectedColor = 'white';
         let myId = 'player_' + Math.random().toString(36).substr(2, 9);
         let myName = '';
+        let isHost = false;
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -487,17 +453,9 @@
             colorGrid.appendChild(div);
         });
         
-        // Используем бесплатный публичный сервер Socket.io
-        const socket = io('https://server-p2p.herokuapp.com/', {
-            transports: ['websocket'],
-            reconnectionAttempts: 3
-        });
-        
-        let roomId = '';
+        // Состояние игры
         let players = new Map();
         let playerObstacles = [];
-        let isHost = false;
-        
         const MAX_PLAYER_OBSTACLES = 10;
         const RESET_CODE = '6787001';
         
@@ -561,9 +519,19 @@
         const codeInput = document.getElementById('codeInput');
         const submitCode = document.getElementById('submitCode');
         const cancelCode = document.getElementById('cancelCode');
-        const roomCode = document.getElementById('roomCode');
-        const inGameRoomCode = document.getElementById('inGameRoomCode');
-        const qrContainer = document.getElementById('qrContainer');
+        const roomLink = document.getElementById('roomLink');
+        
+        // Проверяем URL на параметр join
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinId = urlParams.get('join');
+        
+        if (joinId) {
+            // Автоматически присоединяемся по ссылке
+            setTimeout(() => {
+                document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
+                joinRoom(joinId);
+            }, 500);
+        }
         
         // Создание комнаты
         document.getElementById('createRoomBtn').onclick = () => {
@@ -572,126 +540,75 @@
             if (!validateName(name)) return;
             
             myName = name;
+            isHost = true;
             
-            document.getElementById('createRoomBtn').innerHTML = 'СОЗДАНИЕ <span class="loading"></span>';
-            document.getElementById('createRoomBtn').disabled = true;
+            // Генерируем ID комнаты
+            const roomId = Math.random().toString(36).substr(2, 8);
             
-            // Генерируем код комнаты
-            roomId = Math.floor(100000 + Math.random() * 900000).toString();
+            // Создаем ссылку-приглашение
+            const link = `${window.location.origin}${window.location.pathname}?join=${roomId}`;
+            roomLink.style.display = 'block';
+            roomLink.innerHTML = `🔗 Ссылка для друга:<br><a href="${link}" target="_blank" style="color:#a0d0a0">${link}</a><br><br>📱 Отправь эту ссылку другу`;
             
-            socket.emit('createRoom', { roomId, player: {
+            // Добавляем себя
+            players.set(myId, {
                 id: myId,
                 name: myName,
                 color: selectedColor,
                 x: 0, y: 0,
                 lastDir: { x: 0, y: -1 },
                 r: 18
-            }});
+            });
+            
+            // Сохраняем в localStorage
+            saveGameData(roomId);
+            
+            showGame();
         };
         
-        // Присоединение к комнате
-        document.getElementById('joinRoomBtn').onclick = () => {
+        // Функция присоединения
+        function joinRoom(roomId) {
             const name = document.getElementById('nameInput').value.trim();
-            const id = prompt('Введите 6-значный код комнаты:');
-            
-            if (!id || id.length !== 6 || !/^\d+$/.test(id)) {
-                document.getElementById('errorMsg').textContent = 'Введите 6-значный код';
-                return;
-            }
             
             if (!validateName(name)) return;
             
             myName = name;
-            roomId = id;
             
-            document.getElementById('joinRoomBtn').innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
-            document.getElementById('joinRoomBtn').disabled = true;
+            // Загружаем данные комнаты
+            loadGameData(roomId);
             
-            socket.emit('joinRoom', { roomId, player: {
+            // Добавляем себя
+            players.set(myId, {
                 id: myId,
                 name: myName,
                 color: selectedColor,
                 x: 0, y: 0,
                 lastDir: { x: 0, y: -1 },
                 r: 18
-            }});
-        };
-        
-        // Socket события
-        socket.on('connect', () => {
-            console.log('Connected to server');
-        });
-        
-        socket.on('roomCreated', (data) => {
-            isHost = true;
-            roomId = data.roomId;
-            
-            roomCode.style.display = 'block';
-            roomCode.textContent = roomId;
-            
-            // Генерируем QR код
-            QRCode.toCanvas(document.createElement('canvas'), window.location.href + '?join=' + roomId, {
-                width: 200,
-                margin: 1
-            }, (err, qrCanvas) => {
-                if (!err) {
-                    qrContainer.innerHTML = '';
-                    qrContainer.appendChild(qrCanvas);
-                    qrContainer.style.display = 'flex';
-                }
             });
             
-            players.set(myId, data.players[0]);
             showGame();
-        });
+        }
         
-        socket.on('roomJoined', (data) => {
-            isHost = false;
-            data.players.forEach(p => players.set(p.id, p));
-            playerObstacles = data.obstacles || [];
-            showGame();
-        });
+        function saveGameData(roomId) {
+            const data = {
+                players: Array.from(players.values()),
+                obstacles: playerObstacles,
+                host: myId
+            };
+            localStorage.setItem('mymap_' + roomId, JSON.stringify(data));
+        }
         
-        socket.on('playerJoined', (playerData) => {
-            players.set(playerData.id, playerData);
-            updatePlayerList();
-        });
-        
-        socket.on('playerMoved', (data) => {
-            const p = players.get(data.id);
-            if (p) {
-                p.x = data.x;
-                p.y = data.y;
-                p.lastDir = data.lastDir;
+        function loadGameData(roomId) {
+            const saved = localStorage.getItem('mymap_' + roomId);
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    data.players.forEach(p => players.set(p.id, p));
+                    playerObstacles = data.obstacles || [];
+                } catch(e) {}
             }
-        });
-        
-        socket.on('playerLeft', (id) => {
-            players.delete(id);
-            updatePlayerList();
-        });
-        
-        socket.on('obstacleCreated', (obstacle) => {
-            playerObstacles.push(obstacle);
-            updateCounter();
-        });
-        
-        socket.on('obstacleDeleted', (index) => {
-            playerObstacles.splice(index, 1);
-            updateCounter();
-        });
-        
-        socket.on('roomReset', () => {
-            resetGame();
-        });
-        
-        socket.on('error', (msg) => {
-            document.getElementById('errorMsg').textContent = msg;
-            document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
-            document.getElementById('createRoomBtn').disabled = false;
-            document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
-            document.getElementById('joinRoomBtn').disabled = false;
-        });
+        }
         
         function validateName(name) {
             if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
@@ -704,20 +621,9 @@
         function showGame() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
-            
-            if (isHost) {
-                inGameRoomCode.style.display = 'block';
-                inGameRoomCode.textContent = roomId;
-            }
-            
-            connectionStatus.textContent = `🟢 Подключено`;
+            connectionStatus.textContent = isHost ? '🟢 Хост' : '🟢 Подключено';
             updatePlayerList();
             updateCounter();
-            
-            document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
-            document.getElementById('createRoomBtn').disabled = false;
-            document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
-            document.getElementById('joinRoomBtn').disabled = false;
         }
         
         function resetGame() {
@@ -726,20 +632,18 @@
             
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'block';
-            roomCode.style.display = 'none';
-            qrContainer.style.display = 'none';
-            inGameRoomCode.style.display = 'none';
+            roomLink.style.display = 'none';
             
             player.x = 0;
             player.y = 0;
             lastDir = { x: 0, y: -1 };
             document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
+            
+            // Очищаем URL от параметров
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
         
-        exitBtn.onclick = () => {
-            socket.emit('leaveRoom', { roomId, playerId: myId });
-            resetGame();
-        };
+        exitBtn.onclick = resetGame;
         
         resetBtn.onclick = () => {
             codeDialog.classList.remove('hidden');
@@ -751,7 +655,6 @@
             const code = codeInput.value.trim();
             if (code === RESET_CODE) {
                 if (isHost) {
-                    socket.emit('resetRoom', { roomId });
                     resetGame();
                 } else {
                     alert('Только хост может сбросить игру!');
@@ -810,37 +713,15 @@
             if (canMoveTo(player.x + dx, player.y + dy, player.r)) {
                 player.x += dx;
                 player.y += dy;
-                
-                socket.emit('move', {
-                    roomId,
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir
-                });
                 return;
             }
             
             if (canMoveTo(player.x + dx, player.y, player.r)) {
                 player.x += dx;
-                socket.emit('move', {
-                    roomId,
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir
-                });
             }
             
             if (canMoveTo(player.x, player.y + dy, player.r)) {
                 player.y += dy;
-                socket.emit('move', {
-                    roomId,
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir
-                });
             }
         }
         
@@ -885,7 +766,6 @@
             };
             
             playerObstacles.push(obstacle);
-            socket.emit('createObstacle', { roomId, obstacle });
             updateCounter();
         }
         
@@ -906,7 +786,6 @@
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
                         playerObstacles.splice(i, 1);
-                        socket.emit('deleteObstacle', { roomId, index: i });
                         updateCounter();
                     }
                     return;
