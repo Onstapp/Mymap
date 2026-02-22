@@ -109,7 +109,7 @@
             box-shadow: 0 3px 0 #1a2a1a;
         }
         
-        /* Контейнер для ссылки - компактный */
+        /* Контейнер для ссылки */
         .room-link-container {
             width: 100%;
             margin-bottom: 10px;
@@ -413,7 +413,7 @@
 
     <div class="game" id="gameScreen" style="display: none;">
         <div class="game-header">
-            <!-- Контейнер для ссылки - компактный, над координатами -->
+            <!-- Контейнер для ссылки -->
             <div id="roomLinkContainer" class="room-link-container" style="display: none;">
                 <div class="room-link-label">📱 ССЫЛКА ДЛЯ ДРУГА:</div>
                 <input type="text" id="roomLinkInput" class="room-link-input" readonly>
@@ -565,6 +565,9 @@
         const roomLinkInput = document.getElementById('roomLinkInput');
         const copyBtn = document.getElementById('copyLinkBtn');
         
+        // Интервал для синхронизации
+        let syncInterval = null;
+        
         // Проверяем URL на параметр join
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join');
@@ -586,7 +589,7 @@
             myName = name;
             isHost = true;
             
-            // Генерируем ID комнаты (6 цифр для простоты)
+            // Генерируем ID комнаты (6 цифр)
             currentRoomId = Math.floor(100000 + Math.random() * 900000).toString();
             
             // Создаем ссылку-приглашение
@@ -610,6 +613,9 @@
             // Показываем ссылку
             roomLinkContainer.style.display = 'block';
             roomLinkInput.value = link;
+            
+            // Запускаем синхронизацию для хоста
+            startSync();
         };
         
         // Копирование ссылки
@@ -631,6 +637,7 @@
             
             myName = name;
             currentRoomId = roomId;
+            isHost = false;
             
             // Загружаем данные комнаты
             loadGameData();
@@ -645,14 +652,52 @@
                 r: 18
             });
             
+            // Сохраняем обновленные данные (с новым игроком)
+            saveGameData();
+            
             showGame();
+            
+            // Запускаем синхронизацию для всех
+            startSync();
+        }
+        
+        // Синхронизация данных
+        function startSync() {
+            if (syncInterval) clearInterval(syncInterval);
+            
+            syncInterval = setInterval(() => {
+                if (currentRoomId) {
+                    if (isHost) {
+                        // Хост сохраняет свои данные (свою позицию)
+                        const myPlayer = players.get(myId);
+                        if (myPlayer) {
+                            myPlayer.x = player.x;
+                            myPlayer.y = player.y;
+                            myPlayer.lastDir = lastDir;
+                        }
+                        saveGameData();
+                    } else {
+                        // Игрок загружает данные хоста и других игроков
+                        loadGameData();
+                        
+                        // Обновляем свою позицию в сохраненных данных
+                        const myPlayer = players.get(myId);
+                        if (myPlayer) {
+                            myPlayer.x = player.x;
+                            myPlayer.y = player.y;
+                            myPlayer.lastDir = lastDir;
+                            saveGameData();
+                        }
+                    }
+                }
+            }, 100); // Синхронизация каждые 100мс для плавности
         }
         
         function saveGameData() {
             const data = {
                 players: Array.from(players.values()),
                 obstacles: playerObstacles,
-                host: myId
+                host: isHost ? myId : null
             };
             localStorage.setItem('mymap_' + currentRoomId, JSON.stringify(data));
         }
@@ -662,8 +707,30 @@
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
-                    data.players.forEach(p => players.set(p.id, p));
+                    
+                    // Обновляем список игроков, но сохраняем себя
+                    const myOldData = players.get(myId);
+                    players.clear();
+                    
+                    data.players.forEach(p => {
+                        if (p.id === myId && myOldData) {
+                            // Восстанавливаем свою позицию
+                            players.set(myId, {
+                                ...p,
+                                x: myOldData.x,
+                                y: myOldData.y,
+                                lastDir: myOldData.lastDir
+                            });
+                        } else {
+                            players.set(p.id, p);
+                        }
+                    });
+                    
+                    // Обновляем препятствия
                     playerObstacles = data.obstacles || [];
+                    
+                    updatePlayerList();
+                    updateCounter();
                 } catch(e) {}
             }
         }
@@ -685,8 +752,19 @@
         }
         
         function resetGame() {
+            // Останавливаем синхронизацию
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
+            }
+            
             playerObstacles = [];
             players.clear();
+            
+            // Удаляем данные комнаты
+            if (currentRoomId) {
+                localStorage.removeItem('mymap_' + currentRoomId);
+            }
             
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'block';
@@ -824,6 +902,7 @@
             };
             
             playerObstacles.push(obstacle);
+            saveGameData(); // Сохраняем сразу после создания
             updateCounter();
         }
         
@@ -844,6 +923,7 @@
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
                         playerObstacles.splice(i, 1);
+                        saveGameData(); // Сохраняем после удаления
                         updateCounter();
                     }
                     return;
