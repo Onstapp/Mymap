@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mymap · комната</title>
+    <title>Mymap · по ссылке</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
             background: #1a2a1a;
@@ -17,9 +18,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            touch-action: none;
             font-family: monospace;
         }
-        #screen {
+        #loginScreen {
             background: #2a3a2a;
             border-radius: 52px;
             padding: 40px;
@@ -27,23 +29,67 @@
             color: #d0e0d0;
             width: min(400px, 90vw);
         }
-        h2 {
+        #loginScreen h2 {
             text-align: center;
             margin-bottom: 30px;
             font-size: 32px;
+            text-shadow: 3px 3px 0 #1a2a1a;
+            letter-spacing: 4px;
         }
-        input {
+        .input-group {
+            margin-bottom: 25px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+            text-align: center;
+        }
+        .input-group input {
             width: 100%;
             padding: 15px;
-            margin: 10px 0;
             background: #1a2a1a;
             border: 3px solid #4a7a4a;
             border-radius: 30px;
             color: #d0e0d0;
             font-size: 18px;
+            font-family: monospace;
+            outline: none;
             text-align: center;
         }
-        button {
+        .input-group input:focus {
+            border-color: #7cb57c;
+        }
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .color-option {
+            aspect-ratio: 1;
+            border-radius: 15px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: 0.1s;
+        }
+        .color-option.selected {
+            border-color: white;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px white;
+        }
+        .color-white { background: #ffffff; }
+        .color-black { background: #222222; }
+        .color-red { background: #ff4444; }
+        .color-orange { background: #ff8844; }
+        .color-yellow { background: #ffff44; }
+        .color-green { background: #44ff44; }
+        .color-cyan { background: #44ffff; }
+        .color-blue { background: #4444ff; }
+        .color-pink { background: #ff88ff; }
+        .color-purple { background: #aa44ff; }
+        
+        #createRoomBtn {
             width: 100%;
             padding: 18px;
             background: #4a7a4a;
@@ -54,13 +100,17 @@
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 8px 0 #1a2a1a;
-            margin: 10px 0;
+            margin-top: 20px;
+            transition: 0.05s linear;
+            font-family: monospace;
         }
-        button:active {
+        #createRoomBtn:active {
             transform: translateY(5px);
             box-shadow: 0 3px 0 #1a2a1a;
         }
-        #linkBox {
+        
+        /* Новые стили для ссылки */
+        .room-link-container {
             margin-top: 20px;
             padding: 20px;
             background: #1a2a1a;
@@ -68,97 +118,1031 @@
             border: 3px solid #7cb57c;
             display: none;
         }
-        #linkUrl {
-            color: #ffffa0;
-            font-size: 16px;
-            word-break: break-all;
-            margin: 10px 0;
-            padding: 10px;
-            background: #2a3a2a;
-            border-radius: 15px;
+        .room-link-label {
+            text-align: center;
+            color: #a0d0a0;
+            font-size: 14px;
+            margin-bottom: 10px;
         }
-        #copyBtn {
-            background: #4a7a4a;
-            color: white;
-            font-size: 18px;
+        .room-link-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .room-link-input {
+            flex: 1;
             padding: 12px;
+            background: #2a3a2a;
+            border: 2px solid #4a7a4a;
+            border-radius: 20px;
+            color: #ffffa0;
+            font-size: 14px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .copy-btn {
+            padding: 12px 20px;
+            background: #4a7a4a;
+            border: none;
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1a2a1a;
+            transition: 0.05s linear;
+        }
+        .copy-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #1a2a1a;
+        }
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        #errorMsg {
+            color: #ff8888;
+            text-align: center;
+            margin-top: 15px;
+            min-height: 25px;
+        }
+        
+        .game {
+            background: #2a3a2a;
+            border-radius: 52px;
+            padding: 26px;
+            box-shadow: 0 35px 50px #000000e0;
+        }
+        .game-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 12px;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 5px;
+        }
+        .exit-btn, .reset-btn {
+            background: #4a3a3a;
+            color: #ffb0b0;
+            border: none;
+            border-radius: 30px;
+            padding: 6px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #2a1a1a;
+            transition: 0.05s linear;
+            font-family: monospace;
+            width: fit-content;
+        }
+        .reset-btn {
+            background: #3a4a3a;
+            color: #b0ffb0;
             box-shadow: 0 4px 0 #1a2a1a;
         }
+        .exit-btn:active, .reset-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #2a1a1a;
+        }
+        .coords {
+            color: #d0e0d0;
+            font-family: monospace;
+            font-size: 18px;
+            text-align: center;
+            text-shadow: 2px 2px 0 #1a2a1a;
+            letter-spacing: 2px;
+        }
+        canvas {
+            display: block;
+            width: min(420px, 85vw);
+            height: min(420px, 85vw);
+            background: #7cb57c;
+            border-radius: 42px;
+            box-shadow: inset 0 0 0 4px #4a7a4a;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-left: 10px;
+        }
+        .action-btn {
+            width: min(70px, 15vw);
+            height: min(70px, 15vw);
+            border-radius: 30px;
+            background: #3a4a3a;
+            box-shadow: 0 8px 0 #1a2a1a, inset 0 -3px 10px #5a7a5a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            touch-action: none;
+            transition: 0.05s linear;
+            font-size: 32px;
+            color: #ff6b6b;
+        }
+        .action-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 3px 0 #1a2a1a, inset 0 -3px 10px #5a7a5a;
+        }
+        .joystick-wrapper {
+            margin-right: 10px;
+        }
+        .joystick {
+            width: min(140px, 28vw);
+            height: min(140px, 28vw);
+            background: #3a4a3a;
+            border-radius: 999px;
+            box-shadow: 0 10px 0 #1a2a1a, inset 0 -5px 16px #5a7a5a;
+            position: relative;
+            touch-action: none;
+        }
+        .thumb {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            background: #7cb57c;
+            border-radius: 999px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 9px 18px #1a2a1a, 0 0 0 5px #4a7a4a;
+            transition: transform 0.02s;
+            will-change: transform;
+        }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .player-list {
+            color: #a0d0a0;
+            font-size: 12px;
+            background: #1a2a1a80;
+            padding: 6px 10px;
+            border-radius: 10px;
+            max-width: 180px;
+            pointer-events: none;
+            backdrop-filter: blur(2px);
+            border: 1px solid #5a7a5a;
+        }
+        .counter {
+            color: #d0e0d0;
+            font-size: 14px;
+            font-weight: normal;
+            background: #1a2a1a80;
+            padding: 6px 12px;
+            border: 1px solid #5a7a5a;
+            border-radius: 12px;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+            pointer-events: none;
+            backdrop-filter: blur(2px);
+        }
+        .game-wrapper {
+            position: relative;
+        }
+        .code-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #00000080;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        .code-dialog.hidden {
+            display: none;
+        }
+        .code-box {
+            background: #2a3a2a;
+            padding: 30px;
+            border-radius: 40px;
+            box-shadow: 0 20px 30px #000000;
+            border: 3px solid #5a7a5a;
+            width: min(300px, 80vw);
+        }
+        .code-box h3 {
+            color: #d0e0d0;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .code-box input {
+            width: 100%;
+            padding: 15px;
+            background: #1a2a1a;
+            border: 3px solid #4a7a4a;
+            border-radius: 30px;
+            color: #d0e0d0;
+            font-size: 24px;
+            font-family: monospace;
+            outline: none;
+            text-align: center;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+        }
+        .code-box input:focus {
+            border-color: #7cb57c;
+        }
+        .code-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .code-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.05s linear;
+            font-family: monospace;
+        }
+        .code-btn.submit {
+            background: #4a7a4a;
+            color: #d0e0d0;
+            box-shadow: 0 5px 0 #1a2a1a;
+        }
+        .code-btn.cancel {
+            background: #4a3a3a;
+            color: #ffb0b0;
+            box-shadow: 0 5px 0 #2a1a1a;
+        }
+        .code-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #1a2a1a;
+        }
+        .connection-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #a0d0a0;
+            font-size: 12px;
+            background: #1a2a1a80;
+            padding: 4px 8px;
+            border-radius: 10px;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
 <body>
-    <div id="screen">
+    <div id="loginScreen">
         <h2>MYMAP</h2>
+        <div class="input-group">
+            <label>ТВОЁ ИМЯ (3-20 символов, a-z, 0-9, _)</label>
+            <input type="text" id="nameInput" maxlength="20">
+        </div>
+        <div class="input-group">
+            <label>ЦВЕТ</label>
+            <div class="color-grid" id="colorGrid"></div>
+        </div>
+        <button id="createRoomBtn">СОЗДАТЬ КОМНАТУ</button>
         
-        <input type="text" id="nameInput" placeholder="Твоё имя" value="Player_001">
-        
-        <button id="createBtn">СОЗДАТЬ КОМНАТУ</button>
-        
-        <div id="linkBox">
-            <div style="text-align:center; margin-bottom:10px;">🔗 ССЫЛКА ДЛЯ ДРУГА:</div>
-            <div id="linkUrl"></div>
-            <button id="copyBtn">КОПИРОВАТЬ ССЫЛКУ</button>
+        <!-- Контейнер для ссылки -->
+        <div id="roomLinkContainer" class="room-link-container">
+            <div class="room-link-label">📱 ОТПРАВЬ ЭТУ ССЫЛКУ ДРУГУ:</div>
+            <div class="room-link-box">
+                <input type="text" id="roomLinkInput" class="room-link-input" readonly>
+                <button class="copy-btn" id="copyLinkBtn">КОПИРОВАТЬ</button>
+            </div>
+            <div id="qrContainer" class="qr-container"></div>
         </div>
         
-        <div id="game" style="display: none;">
-            <h3>Игра началась!</h3>
-            <p>Тут будет игровой процесс...</p>
+        <div id="errorMsg"></div>
+    </div>
+
+    <div class="game" id="gameScreen" style="display: none;">
+        <div class="game-header">
+            <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
+            <div class="header-buttons">
+                <button class="reset-btn" id="resetBtn">СБРОС</button>
+                <button class="exit-btn" id="exitBtn">ВЫХОД</button>
+            </div>
+        </div>
+        <div class="game-wrapper">
+            <div class="info-panel">
+                <div class="player-list" id="playerList"></div>
+                <div class="counter" id="counter">0/10</div>
+            </div>
+            <canvas id="world" width="600" height="600"></canvas>
+            <div class="connection-status" id="connectionStatus"></div>
+        </div>
+        <div class="controls">
+            <div class="action-buttons">
+                <div class="action-btn" id="deleteBtn">✕</div>
+                <div class="action-btn" id="createBtn"></div>
+            </div>
+            <div class="joystick-wrapper">
+                <div class="joystick" id="joystick">
+                    <div class="thumb" id="thumb"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="code-dialog hidden" id="codeDialog">
+        <div class="code-box">
+            <h3>🔐 ВВЕДИ КОД</h3>
+            <input type="text" id="codeInput" maxlength="7" placeholder="0000000">
+            <div class="code-buttons">
+                <button class="code-btn submit" id="submitCode">OK</button>
+                <button class="code-btn cancel" id="cancelCode">ОТМЕНА</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const nameInput = document.getElementById('nameInput');
-        const createBtn = document.getElementById('createBtn');
-        const linkBox = document.getElementById('linkBox');
-        const linkUrl = document.getElementById('linkUrl');
-        const copyBtn = document.getElementById('copyBtn');
-        const gameDiv = document.getElementById('game');
-
-        createBtn.onclick = () => {
-            const name = nameInput.value.trim();
-            if (name.length < 3) {
-                alert('Имя должно быть от 3 символов');
-                return;
+        // Генерируем случайное число
+        function getRandomPlayerNumber() {
+            const num = Math.floor(Math.random() * 999) + 1;
+            return num.toString().padStart(3, '0');
+        }
+        
+        document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
+        
+        // Цвета
+        const colors = [
+            'white', 'black', 'red', 'orange', 'yellow',
+            'green', 'cyan', 'blue', 'pink', 'purple'
+        ];
+        
+        let selectedColor = 'white';
+        let myId = 'player_' + Math.random().toString(36).substr(2, 9);
+        let myName = '';
+        let isHost = false;
+        let currentRoomId = '';
+        
+        // Сетка цветов
+        const colorGrid = document.getElementById('colorGrid');
+        colors.forEach(color => {
+            const div = document.createElement('div');
+            div.className = `color-option color-${color}`;
+            if (color === 'white') div.classList.add('selected');
+            div.onclick = () => {
+                document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
+                div.classList.add('selected');
+                selectedColor = color;
+            };
+            colorGrid.appendChild(div);
+        });
+        
+        // Состояние игры
+        let players = new Map();
+        let playerObstacles = [];
+        const MAX_PLAYER_OBSTACLES = 10;
+        const RESET_CODE = '6787001';
+        
+        // Статические препятствия
+        const staticObstacles = [];
+        const WORLD_SIZE = 2000;
+        const SPAWN_RADIUS = 400;
+        
+        for (let i = 0; i < 150; i++) {
+            let x, y, dist;
+            do {
+                x = (Math.random() - 0.5) * WORLD_SIZE;
+                y = (Math.random() - 0.5) * WORLD_SIZE;
+                dist = Math.hypot(x, y);
+            } while (dist < SPAWN_RADIUS);
+            
+            const shape = Math.floor(Math.random() * 3);
+            let w, h;
+            
+            switch(shape) {
+                case 0: w = h = 30 + Math.random() * 50; break;
+                case 1: w = 50 + Math.random() * 60; h = 25 + Math.random() * 30; break;
+                case 2: w = 25 + Math.random() * 30; h = 50 + Math.random() * 60; break;
             }
-
-            // Генерируем код комнаты (6 цифр)
-            const roomCode = Math.floor(100000 + Math.random() * 900000);
             
-            // Создаем ссылку
-            const link = window.location.href.split('?')[0] + '?join=' + roomCode;
-            
-            // Показываем ссылку
-            linkUrl.textContent = link;
-            linkBox.style.display = 'block';
-            
-            // Прячем кнопку создания
-            createBtn.style.display = 'none';
-            
-            // Показываем игру
-            gameDiv.style.display = 'block';
+            staticObstacles.push({
+                x: x - w/2,
+                y: y - h/2,
+                w, h
+            });
+        }
+        
+        // Игрок
+        const player = {
+            x: 0,
+            y: 0,
+            r: 18
         };
-
+        
+        // Джойстик
+        let drag = false;
+        const maxDist = 35;
+        const vec = { x: 0, y: 0 };
+        const SPEED = 5;
+        let lastDir = { x: 0, y: -1 };
+        
+        // DOM элементы
+        const canvas = document.getElementById('world');
+        const ctx = canvas.getContext('2d');
+        const joyDiv = document.getElementById('joystick');
+        const thumbDiv = document.getElementById('thumb');
+        const coordsDiv = document.getElementById('coordsDisplay');
+        const createBtn = document.getElementById('createBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const counterDiv = document.getElementById('counter');
+        const playerListDiv = document.getElementById('playerList');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const exitBtn = document.getElementById('exitBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const codeDialog = document.getElementById('codeDialog');
+        const codeInput = document.getElementById('codeInput');
+        const submitCode = document.getElementById('submitCode');
+        const cancelCode = document.getElementById('cancelCode');
+        
+        // Элементы для ссылки
+        const roomLinkContainer = document.getElementById('roomLinkContainer');
+        const roomLinkInput = document.getElementById('roomLinkInput');
+        const copyBtn = document.getElementById('copyLinkBtn');
+        const qrContainer = document.getElementById('qrContainer');
+        
+        // Проверяем URL на параметр join
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinId = urlParams.get('join');
+        
+        if (joinId) {
+            // Автоматически присоединяемся по ссылке
+            setTimeout(() => {
+                document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
+                joinRoom(joinId);
+            }, 500);
+        }
+        
+        // Создание комнаты
+        document.getElementById('createRoomBtn').onclick = () => {
+            const name = document.getElementById('nameInput').value.trim();
+            
+            if (!validateName(name)) return;
+            
+            myName = name;
+            isHost = true;
+            
+            // Генерируем ID комнаты (6 цифр для простоты)
+            currentRoomId = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            // Создаем ссылку-приглашение
+            const link = `${window.location.origin}${window.location.pathname}?join=${currentRoomId}`;
+            
+            // Показываем контейнер со ссылкой
+            roomLinkContainer.style.display = 'block';
+            roomLinkInput.value = link;
+            
+            // Генерируем QR код
+            QRCode.toCanvas(document.createElement('canvas'), link, {
+                width: 200,
+                margin: 1,
+                color: {
+                    dark: '#2a3a2a',
+                    light: '#7cb57c'
+                }
+            }, (err, qrCanvas) => {
+                if (!err) {
+                    qrContainer.innerHTML = '';
+                    qrContainer.appendChild(qrCanvas);
+                }
+            });
+            
+            // Добавляем себя
+            players.set(myId, {
+                id: myId,
+                name: myName,
+                color: selectedColor,
+                x: 0, y: 0,
+                lastDir: { x: 0, y: -1 },
+                r: 18
+            });
+            
+            // Сохраняем в localStorage
+            saveGameData();
+            
+            showGame();
+        };
+        
         // Копирование ссылки
         copyBtn.onclick = () => {
-            const text = linkUrl.textContent;
-            navigator.clipboard.writeText(text).then(() => {
-                copyBtn.textContent = 'СКОПИРОВАНО!';
+            roomLinkInput.select();
+            navigator.clipboard.writeText(roomLinkInput.value).then(() => {
+                copyBtn.textContent = 'ГОТОВО!';
                 setTimeout(() => {
-                    copyBtn.textContent = 'КОПИРОВАТЬ ССЫЛКУ';
+                    copyBtn.textContent = 'КОПИРОВАТЬ';
                 }, 2000);
             });
         };
-
-        // Проверяем, не перешли ли по ссылке
-        const urlParams = new URLSearchParams(window.location.search);
-        const joinCode = urlParams.get('join');
         
-        if (joinCode) {
-            nameInput.value = 'Player_' + Math.floor(Math.random() * 999);
-            createBtn.style.display = 'none';
-            gameDiv.style.display = 'block';
-            alert('Ты подключился к комнате ' + joinCode);
+        // Функция присоединения
+        function joinRoom(roomId) {
+            const name = document.getElementById('nameInput').value.trim();
+            
+            if (!validateName(name)) return;
+            
+            myName = name;
+            currentRoomId = roomId;
+            
+            // Загружаем данные комнаты
+            loadGameData();
+            
+            // Добавляем себя
+            players.set(myId, {
+                id: myId,
+                name: myName,
+                color: selectedColor,
+                x: 0, y: 0,
+                lastDir: { x: 0, y: -1 },
+                r: 18
+            });
+            
+            showGame();
         }
+        
+        function saveGameData() {
+            const data = {
+                players: Array.from(players.values()),
+                obstacles: playerObstacles,
+                host: myId
+            };
+            localStorage.setItem('mymap_' + currentRoomId, JSON.stringify(data));
+        }
+        
+        function loadGameData() {
+            const saved = localStorage.getItem('mymap_' + currentRoomId);
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    data.players.forEach(p => players.set(p.id, p));
+                    playerObstacles = data.obstacles || [];
+                } catch(e) {}
+            }
+        }
+        
+        function validateName(name) {
+            if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
+                document.getElementById('errorMsg').textContent = 'Недопустимое имя';
+                return false;
+            }
+            return true;
+        }
+        
+        function showGame() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            connectionStatus.textContent = isHost ? '🟢 Хост' : '🟢 Подключено';
+            updatePlayerList();
+            updateCounter();
+        }
+        
+        function resetGame() {
+            playerObstacles = [];
+            players.clear();
+            
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'block';
+            roomLinkContainer.style.display = 'none';
+            qrContainer.innerHTML = '';
+            
+            player.x = 0;
+            player.y = 0;
+            lastDir = { x: 0, y: -1 };
+            document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
+            
+            // Очищаем URL от параметров
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        exitBtn.onclick = resetGame;
+        
+        resetBtn.onclick = () => {
+            codeDialog.classList.remove('hidden');
+            codeInput.value = '';
+            codeInput.focus();
+        };
+        
+        submitCode.onclick = () => {
+            const code = codeInput.value.trim();
+            if (code === RESET_CODE) {
+                if (isHost) {
+                    resetGame();
+                } else {
+                    alert('Только хост может сбросить игру!');
+                }
+                codeDialog.classList.add('hidden');
+            } else {
+                alert('Неверный код!');
+                codeInput.value = '';
+            }
+        };
+        
+        cancelCode.onclick = () => {
+            codeDialog.classList.add('hidden');
+        };
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !codeDialog.classList.contains('hidden')) {
+                codeDialog.classList.add('hidden');
+            }
+        });
+        
+        function updatePlayerList() {
+            const list = Array.from(players.values())
+                .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}`)
+                .join('<br>');
+            playerListDiv.innerHTML = `👥 Игроки:<br>${list}`;
+        }
+        
+        function canMoveTo(nx, ny, r) {
+            for (let ob of staticObstacles) {
+                const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
+                const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
+                const d = Math.hypot(nx - nearX, ny - nearY);
+                if (d < r) return false;
+            }
+            
+            for (let ob of playerObstacles) {
+                const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
+                const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
+                const d = Math.hypot(nx - nearX, ny - nearY);
+                if (d < r) return false;
+            }
+            
+            for (let p of players.values()) {
+                if (p.id === myId) continue;
+                const d = Math.hypot(nx - p.x, ny - p.y);
+                if (d < r + (p.r || 18)) return false;
+            }
+            
+            return true;
+        }
+        
+        function move(dx, dy) {
+            if (dx === 0 && dy === 0) return;
+            
+            if (canMoveTo(player.x + dx, player.y + dy, player.r)) {
+                player.x += dx;
+                player.y += dy;
+                return;
+            }
+            
+            if (canMoveTo(player.x + dx, player.y, player.r)) {
+                player.x += dx;
+            }
+            
+            if (canMoveTo(player.x, player.y + dy, player.r)) {
+                player.y += dy;
+            }
+        }
+        
+        function createObstacle() {
+            const myObstacles = playerObstacles.filter(o => o.playerId === myId).length;
+            if (myObstacles >= MAX_PLAYER_OBSTACLES) return;
+            
+            const len = Math.hypot(lastDir.x, lastDir.y);
+            if (len < 0.1) return;
+            
+            const dirX = lastDir.x / len;
+            const dirY = lastDir.y / len;
+            
+            const createDist = player.r + 40;
+            const newX = player.x + dirX * createDist;
+            const newY = player.y + dirY * createDist;
+            
+            const w = 44;
+            const h = 44;
+            const x = newX - w/2;
+            const y = newY - h/2;
+            
+            const tempObstacle = { x, y, w, h };
+            
+            for (let ob of staticObstacles) {
+                if (rectCollide(tempObstacle, ob)) return;
+            }
+            
+            for (let ob of playerObstacles) {
+                if (rectCollide(tempObstacle, ob)) return;
+            }
+            
+            for (let p of players.values()) {
+                const d = Math.hypot(newX - p.x, newY - p.y);
+                if (d < player.r + w/2) return;
+            }
+            
+            const obstacle = {
+                playerId: myId,
+                playerColor: selectedColor,
+                x, y, w, h
+            };
+            
+            playerObstacles.push(obstacle);
+            updateCounter();
+        }
+        
+        function deleteObstacleAtDot() {
+            const len = Math.hypot(lastDir.x, lastDir.y);
+            if (len < 0.1) return;
+            
+            const dirX = lastDir.x / len;
+            const dirY = lastDir.y / len;
+            
+            const dotDist = 12 + 25;
+            const dotX = player.x + dirX * (player.r + dotDist);
+            const dotY = player.y + dirY * (player.r + dotDist);
+            
+            for (let i = 0; i < playerObstacles.length; i++) {
+                const ob = playerObstacles[i];
+                if (dotX >= ob.x && dotX <= ob.x + ob.w &&
+                    dotY >= ob.y && dotY <= ob.y + ob.h) {
+                    if (ob.playerId === myId) {
+                        playerObstacles.splice(i, 1);
+                        updateCounter();
+                    }
+                    return;
+                }
+            }
+        }
+        
+        function rectCollide(r1, r2) {
+            return !(r2.x >= r1.x + r1.w ||
+                     r2.x + r2.w <= r1.x ||
+                     r2.y >= r1.y + r1.h ||
+                     r2.y + r2.h <= r1.y);
+        }
+        
+        function updateCoords() {
+            const x = Math.round(player.x);
+            const y = Math.round(player.y);
+            coordsDiv.textContent = `X: ${x}  |  Y: ${y}`;
+        }
+        
+        function updateCounter() {
+            const myObstacles = playerObstacles.filter(o => o.playerId === myId).length;
+            counterDiv.textContent = `${myObstacles}/${MAX_PLAYER_OBSTACLES}`;
+        }
+        
+        function onStart(e) {
+            e.preventDefault();
+            drag = true;
+            onMove(e);
+        }
+        
+        function onMove(e) {
+            if (!drag) return;
+            e.preventDefault();
+            
+            const rect = joyDiv.getBoundingClientRect();
+            const cx = rect.left + rect.width/2;
+            const cy = rect.top + rect.height/2;
+            
+            let x, y;
+            if (e.touches) {
+                x = e.touches[0].clientX;
+                y = e.touches[0].clientY;
+            } else {
+                x = e.clientX;
+                y = e.clientY;
+            }
+            
+            let dx = x - cx;
+            let dy = y - cy;
+            const dist = Math.hypot(dx, dy);
+            
+            if (dist > maxDist) {
+                dx = (dx / dist) * maxDist;
+                dy = (dy / dist) * maxDist;
+            }
+            
+            thumbDiv.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            
+            if (dist > 0.1) {
+                vec.x = dx / maxDist;
+                vec.y = dy / maxDist;
+                lastDir.x = vec.x;
+                lastDir.y = vec.y;
+            } else {
+                vec.x = 0;
+                vec.y = 0;
+            }
+        }
+        
+        function onEnd(e) {
+            e.preventDefault();
+            drag = false;
+            thumbDiv.style.transform = 'translate(-50%, -50%)';
+            vec.x = 0;
+            vec.y = 0;
+        }
+        
+        createBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            createObstacle();
+        });
+        createBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            createObstacle();
+        });
+        
+        deleteBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            deleteObstacleAtDot();
+        });
+        deleteBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            deleteObstacleAtDot();
+        });
+        
+        joyDiv.addEventListener('mousedown', onStart);
+        joyDiv.addEventListener('mousemove', onMove);
+        joyDiv.addEventListener('mouseup', onEnd);
+        joyDiv.addEventListener('mouseleave', onEnd);
+        
+        joyDiv.addEventListener('touchstart', onStart, { passive: false });
+        joyDiv.addEventListener('touchmove', onMove, { passive: false });
+        joyDiv.addEventListener('touchend', onEnd);
+        joyDiv.addEventListener('touchcancel', onEnd);
+        joyDiv.addEventListener('contextmenu', e => e.preventDefault());
+        
+        function getColor(colorName) {
+            switch(colorName) {
+                case 'white': return '#ffffff';
+                case 'black': return '#222222';
+                case 'red': return '#ff4444';
+                case 'orange': return '#ff8844';
+                case 'yellow': return '#ffff44';
+                case 'green': return '#44ff44';
+                case 'cyan': return '#44ffff';
+                case 'blue': return '#4444ff';
+                case 'pink': return '#ff88ff';
+                case 'purple': return '#aa44ff';
+                default: return '#7fd4ff';
+            }
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, 600, 600);
+            
+            const camX = player.x - 300;
+            const camY = player.y - 300;
+            
+            ctx.fillStyle = '#7cb57c';
+            ctx.fillRect(0, 0, 600, 600);
+            
+            ctx.fillStyle = '#5a4f4a';
+            ctx.shadowColor = '#3a2f2a';
+            ctx.shadowBlur = 18;
+            
+            for (let ob of staticObstacles) {
+                const screenX = ob.x - camX;
+                const screenY = ob.y - camY;
+                if (screenX + ob.w > -50 && screenX < 650 && screenY + ob.h > -50 && screenY < 650) {
+                    ctx.fillRect(screenX, screenY, ob.w, ob.h);
+                }
+            }
+            
+            for (let ob of playerObstacles) {
+                const screenX = ob.x - camX;
+                const screenY = ob.y - camY;
+                if (screenX + ob.w > -50 && screenX < 650 && screenY + ob.h > -50 && screenY < 650) {
+                    ctx.shadowColor = '#2a7080';
+                    ctx.beginPath();
+                    ctx.arc(screenX + ob.w/2, screenY + ob.h/2, ob.w/2, 0, Math.PI*2);
+                    ctx.fillStyle = getColor(ob.playerColor);
+                    ctx.fill();
+                    ctx.strokeStyle = '#3f7080';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+            
+            for (let p of players.values()) {
+                if (p.id === myId) continue;
+                
+                const screenX = 300 + (p.x - player.x);
+                const screenY = 300 + (p.y - player.y);
+                
+                if (screenX > -50 && screenX < 650 && screenY > -50 && screenY < 650) {
+                    ctx.shadowBlur = 28;
+                    ctx.shadowColor = '#4aa0c0';
+                    ctx.beginPath();
+                    ctx.arc(screenX, screenY, p.r || 18, 0, Math.PI*2);
+                    ctx.fillStyle = getColor(p.color);
+                    ctx.fill();
+                    ctx.shadowBlur = 10;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = '#000000';
+                    ctx.font = 'bold 14px monospace';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(p.name, screenX, screenY - 28);
+                    
+                    if (p.lastDir) {
+                        const len = Math.hypot(p.lastDir.x, p.lastDir.y);
+                        if (len > 0.1) {
+                            const dirX = p.lastDir.x / len;
+                            const dirY = p.lastDir.y / len;
+                            const dotX = screenX + dirX * 30;
+                            const dotY = screenY + dirY * 30;
+                            
+                            ctx.shadowBlur = 0;
+                            ctx.beginPath();
+                            ctx.arc(dotX, dotY, 5, 0, Math.PI*2);
+                            ctx.fillStyle = '#6a6a6a';
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+            
+            ctx.shadowBlur = 28;
+            ctx.shadowColor = '#4aa0c0';
+            ctx.beginPath();
+            ctx.arc(300, 300, player.r, 0, Math.PI*2);
+            ctx.fillStyle = getColor(selectedColor);
+            ctx.fill();
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = '#000000';
+            ctx.font = 'bold 14px monospace';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText(myName, 300, 300 - 28);
+            
+            const dirToUse = drag ? vec : lastDir;
+            const len = Math.hypot(dirToUse.x, dirToUse.y);
+            if (len > 0.1) {
+                const dirX = dirToUse.x / len;
+                const dirY = dirToUse.y / len;
+                
+                let distFromPlayer;
+                if (drag) {
+                    distFromPlayer = 12 + (len * 25);
+                } else {
+                    distFromPlayer = 12 + 25;
+                }
+                
+                const dotX = 300 + dirX * (player.r + distFromPlayer);
+                const dotY = 300 + dirY * (player.r + distFromPlayer);
+                
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.arc(dotX, dotY, 6, 0, Math.PI*2);
+                ctx.fillStyle = '#6a6a6a';
+                ctx.fill();
+            }
+            
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(300 - player.x, 300 - player.y, 14, 0, 2*Math.PI);
+            ctx.fillStyle = '#ffffff60';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffffa0';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            updatePlayerList();
+        }
+        
+        function loop() {
+            if (drag) {
+                move(vec.x * SPEED, vec.y * SPEED);
+            }
+            updateCoords();
+            draw();
+            requestAnimationFrame(loop);
+        }
+        
+        loop();
     </script>
 </body>
 </html>
