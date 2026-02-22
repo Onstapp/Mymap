@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>кружок · свободно</title>
+    <title>кружок · три стены</title>
     <style>
         * {
             margin: 0;
@@ -84,61 +84,29 @@
         const player = {
             x: 0,
             y: 0,
-            r: 14
+            r: 16
         };
 
         // джойстик
         let drag = false;
-        const maxDist = 30;
+        const maxDist = 32;
         const vec = { x: 0, y: 0 };
-        const SPEED = 3.8;
+        const SPEED = 4;
 
-        // препятствия (редкие)
-        const blocks = new Map();
-        const BLOCK = 50;
-
-        // генерация блока - ТОЛЬКО 15% заполненность
-        function getBlock(wx, wy) {
-            const gx = Math.floor(wx / BLOCK) * BLOCK;
-            const gy = Math.floor(wy / BLOCK) * BLOCK;
-            const key = gx + '|' + gy;
-            
-            if (blocks.has(key)) return blocks.get(key);
-            
-            // случайно, но стабильно для координат
-            const hash = Math.abs(gx * 374761393 + gy * 668265263) % 100;
-            if (hash < 15) { // 15% стен, 85% пустота
-                const b = { 
-                    x: gx, 
-                    y: gy, 
-                    w: BLOCK * 0.8, // чуть меньше, чтобы не слипались
-                    h: BLOCK * 0.8
-                };
-                blocks.set(key, b);
-                return b;
-            } else {
-                blocks.set(key, null);
-                return null;
-            }
-        }
+        // ТРИ ПРЕПЯТСТВИЯ с большими промежутками
+        const obstacles = [
+            { x: 200, y: 150, w: 60, h: 60 },  // первое
+            { x: -150, y: -200, w: 70, h: 70 }, // второе (далеко слева сверху)
+            { x: 300, y: -250, w: 65, h: 65 }   // третье (далеко справа сверху)
+        ];
 
         // проверка столкновения
         function canMoveTo(nx, ny, r) {
-            const minX = Math.floor((nx - r) / BLOCK);
-            const maxX = Math.floor((nx + r) / BLOCK);
-            const minY = Math.floor((ny - r) / BLOCK);
-            const maxY = Math.floor((ny + r) / BLOCK);
-            
-            for (let gy = minY; gy <= maxY; gy++) {
-                for (let gx = minX; gx <= maxX; gx++) {
-                    const b = getBlock(gx * BLOCK + BLOCK/2, gy * BLOCK + BLOCK/2);
-                    if (!b) continue;
-                    
-                    const nearX = Math.max(b.x, Math.min(nx, b.x + b.w));
-                    const nearY = Math.max(b.y, Math.min(ny, b.y + b.h));
-                    const d = Math.hypot(nx - nearX, ny - nearY);
-                    if (d < r) return false;
-                }
+            for (let ob of obstacles) {
+                const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
+                const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
+                const d = Math.hypot(nx - nearX, ny - nearY);
+                if (d < r) return false;
             }
             return true;
         }
@@ -233,25 +201,21 @@
             const camX = player.x - 250;
             const camY = player.y - 250;
             
-            // стены (редкие)
+            // рисуем три препятствия
             ctx.fillStyle = '#7d6b55';
             ctx.shadowColor = '#4a3f30';
             ctx.shadowBlur = 16;
             
-            const sx = Math.floor((camX - BLOCK) / BLOCK);
-            const ex = Math.floor((camX + 500 + BLOCK) / BLOCK);
-            const sy = Math.floor((camY - BLOCK) / BLOCK);
-            const ey = Math.floor((camY + 500 + BLOCK) / BLOCK);
-            
-            for (let gy = sy; gy <= ey; gy++) {
-                for (let gx = sx; gx <= ex; gx++) {
-                    const b = getBlock(gx * BLOCK + BLOCK/2, gy * BLOCK + BLOCK/2);
-                    if (!b) continue;
-                    ctx.fillRect(b.x - camX, b.y - camY, b.w, b.h);
+            for (let ob of obstacles) {
+                const screenX = ob.x - camX;
+                const screenY = ob.y - camY;
+                // рисуем только если видно на экране
+                if (screenX + ob.w > 0 && screenX < 500 && screenY + ob.h > 0 && screenY < 500) {
+                    ctx.fillRect(screenX, screenY, ob.w, ob.h);
                 }
             }
             
-            // игрок
+            // игрок (всегда в центре)
             ctx.shadowBlur = 26;
             ctx.shadowColor = '#7fa3f0';
             ctx.beginPath();
@@ -280,6 +244,11 @@
             ctx.beginPath();
             ctx.arc(261, 239, 1.8, 0, 2*Math.PI);
             ctx.fill();
+
+            // маленькие координаты для ориентира
+            ctx.font = '12px monospace';
+            ctx.fillStyle = '#a0b0d0';
+            ctx.fillText('⚪', 10, 30);
         }
 
         // цикл
