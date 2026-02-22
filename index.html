@@ -466,9 +466,9 @@
             colorGrid.appendChild(div);
         });
         
-        // PeerJS настройки с правильными серверами
+        // Альтернативный PeerJS сервер
         const peerOptions = {
-            host: '0.peerjs.com',
+            host: 'peerjs-server.herokuapp.com',
             port: 443,
             path: '/',
             secure: true,
@@ -478,10 +478,17 @@
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
                     { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-                    { urls: 'stun:stun.ekiga.net' }
+                    { urls: 'stun:stun4.l.google.com:19302' }
                 ]
             }
+        };
+        
+        // Запасной вариант на случай ошибки
+        const fallbackPeerOptions = {
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
+            secure: true
         };
         
         let peer = null;
@@ -568,18 +575,20 @@
             document.getElementById('createRoomBtn').innerHTML = 'СОЗДАНИЕ <span class="loading"></span>';
             document.getElementById('createRoomBtn').disabled = true;
             
-            // Создаем новый Peer
-            peer = new Peer(peerOptions);
+            // Пробуем первый сервер
+            tryCreatePeer(peerOptions, 0);
+        };
+        
+        function tryCreatePeer(options, attempt) {
+            peer = new Peer(options);
             
             peer.on('open', (id) => {
                 roomId = id;
                 isHost = true;
                 
-                // Показываем ID комнаты
                 roomIdDisplay.style.display = 'block';
                 roomIdDisplay.textContent = `КОМНАТА: ${roomId}`;
                 
-                // Добавляем себя
                 players.set(myId, {
                     id: myId,
                     name: myName,
@@ -591,7 +600,6 @@
                 
                 showGame();
                 
-                // Слушаем подключения
                 peer.on('connection', (connection) => {
                     conn = connection;
                     
@@ -603,7 +611,6 @@
                         connectionStatus.textContent = 'Игрок отключился';
                     });
                     
-                    // Отправляем текущее состояние
                     conn.send({
                         type: 'init',
                         players: Array.from(players.values()),
@@ -613,11 +620,18 @@
             });
             
             peer.on('error', (err) => {
-                document.getElementById('errorMsg').textContent = 'Ошибка: ' + err.type;
-                document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
-                document.getElementById('createRoomBtn').disabled = false;
+                console.log('Peer error:', err);
+                
+                if (attempt === 0) {
+                    // Пробуем запасной сервер
+                    tryCreatePeer(fallbackPeerOptions, 1);
+                } else {
+                    document.getElementById('errorMsg').textContent = 'Ошибка подключения к серверу';
+                    document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
+                    document.getElementById('createRoomBtn').disabled = false;
+                }
             });
-        };
+        }
         
         // Присоединение к комнате
         document.getElementById('joinRoomBtn').onclick = () => {
@@ -628,18 +642,19 @@
             
             myName = name;
             
-            // Показываем загрузку
             document.getElementById('joinRoomBtn').innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
             document.getElementById('joinRoomBtn').disabled = true;
             
-            // Создаем новый Peer для подключения
-            peer = new Peer(peerOptions);
+            tryJoinPeer(id, peerOptions, 0);
+        };
+        
+        function tryJoinPeer(roomId, options, attempt) {
+            peer = new Peer(options);
             
             peer.on('open', () => {
-                conn = peer.connect(id);
+                conn = peer.connect(roomId);
                 
                 conn.on('open', () => {
-                    roomId = id;
                     isHost = false;
                     
                     conn.on('data', (data) => {
@@ -650,7 +665,6 @@
                         connectionStatus.textContent = 'Соединение потеряно';
                     });
                     
-                    // Отправляем информацию о себе
                     conn.send({
                         type: 'join',
                         player: {
@@ -675,11 +689,17 @@
             });
             
             peer.on('error', (err) => {
-                document.getElementById('errorMsg').textContent = 'Ошибка подключения';
-                document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
-                document.getElementById('joinRoomBtn').disabled = false;
+                console.log('Peer error:', err);
+                
+                if (attempt === 0) {
+                    tryJoinPeer(roomId, fallbackPeerOptions, 1);
+                } else {
+                    document.getElementById('errorMsg').textContent = 'Не удалось подключиться к комнате';
+                    document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
+                    document.getElementById('joinRoomBtn').disabled = false;
+                }
             });
-        };
+        }
         
         function validateName(name) {
             if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
@@ -755,7 +775,6 @@
             updatePlayerList();
             updateCounter();
             
-            // Сбрасываем кнопки
             document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
             document.getElementById('createRoomBtn').disabled = false;
             document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
@@ -767,7 +786,6 @@
             players.clear();
             
             if (isHost && peer) {
-                // Хост очищает всё
                 players.set(myId, {
                     id: myId,
                     name: myName,
@@ -811,7 +829,6 @@
             const code = codeInput.value.trim();
             if (code === RESET_CODE) {
                 if (isHost) {
-                    // Хост сбрасывает всех
                     if (conn) {
                         broadcast({ type: 'reset', code: RESET_CODE });
                     }
