@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>каменный лес · точка направления</title>
+    <title>каменный лес · координаты</title>
     <style>
         * {
             margin: 0;
@@ -61,10 +61,20 @@
             transition: transform 0.02s;
             will-change: transform;
         }
+        .coords {
+            color: #d0e0d0;
+            font-family: monospace;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 0 #1a2a1a;
+            letter-spacing: 2px;
+        }
     </style>
 </head>
 <body>
 <div class="game">
+    <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
     <canvas id="world" width="600" height="600"></canvas>
     <div class="pad">
         <div class="joystick" id="joystick">
@@ -79,8 +89,9 @@
         const ctx = canvas.getContext('2d');
         const joyDiv = document.getElementById('joystick');
         const thumbDiv = document.getElementById('thumb');
+        const coordsDiv = document.getElementById('coordsDisplay');
 
-        // игрок
+        // игрок СТАРТУЕТ В (0, 0)
         const player = {
             x: 0,
             y: 0,
@@ -93,7 +104,7 @@
         const vec = { x: 0, y: 0 };
         const SPEED = 5;
 
-        // ФИКСИРОВАННЫЕ ПРЕПЯТСТВИЯ (всегда на одних местах)
+        // ФИКСИРОВАННЫЕ ПРЕПЯТСТВИЯ
         const obstacles = [
             // группа слева
             { x: -450, y: -320, w: 70, h: 70 },
@@ -131,7 +142,13 @@
             { x: -100, y: -400, w: 70, h: 70 },
             { x: 300, y: -300, w: 80, h: 80 },
             { x: -300, y: 300, w: 75, h: 75 },
-            { x: 100, y: 400, w: 90, h: 90 }
+            { x: 100, y: 400, w: 90, h: 90 },
+            
+            // еще камни для разнообразия
+            { x: -700, y: -200, w: 85, h: 85 },
+            { x: 700, y: 200, w: 95, h: 95 },
+            { x: -650, y: 650, w: 80, h: 80 },
+            { x: 650, y: -650, w: 90, h: 90 }
         ];
 
         // проверка столкновения
@@ -162,6 +179,13 @@
             if (canMoveTo(player.x, player.y + dy, player.r)) {
                 player.y += dy;
             }
+        }
+
+        // обновление координат на экране
+        function updateCoords() {
+            const x = Math.round(player.x);
+            const y = Math.round(player.y);
+            coordsDiv.textContent = `X: ${x}  |  Y: ${y}`;
         }
 
         // джойстик
@@ -264,7 +288,7 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // точка направления (появляется только при движении)
+            // СЕРАЯ точка направления (появляется только при движении)
             const moving = Math.hypot(vec.x, vec.y) > 0.1;
             
             if (moving) {
@@ -278,12 +302,12 @@
                 const dotY = 300 + dirY * (player.r + 12);
                 
                 ctx.shadowBlur = 15;
-                ctx.shadowColor = '#ffffff';
+                ctx.shadowColor = '#666666';
                 ctx.beginPath();
                 ctx.arc(dotX, dotY, 6, 0, Math.PI*2);
-                ctx.fillStyle = '#ffffb0';
+                ctx.fillStyle = '#a0a0a0';
                 ctx.fill();
-                ctx.strokeStyle = '#d0d070';
+                ctx.strokeStyle = '#707070';
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
@@ -291,14 +315,25 @@
                 ctx.shadowBlur = 8;
                 ctx.beginPath();
                 ctx.arc(dotX - 1.5, dotY - 1.5, 2, 0, Math.PI*2);
-                ctx.fillStyle = '#ffffff';
+                ctx.fillStyle = '#c0c0c0';
                 ctx.fill();
             }
+
+            // маленькая отметка центра (0,0) для ориентира
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(300 - player.x, 300 - player.y, 4, 0, 2*Math.PI);
+            ctx.fillStyle = '#fffffff0';
+            ctx.fill();
+            ctx.strokeStyle = '#00000060';
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
 
         // цикл
         function loop() {
             move(vec.x * SPEED, vec.y * SPEED);
+            updateCoords();
             draw();
             requestAnimationFrame(loop);
         }
