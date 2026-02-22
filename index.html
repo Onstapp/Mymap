@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>кружок · глаза и обзор</title>
+    <title>кружок · бегающие глаза</title>
     <style>
         * {
             margin: 0;
@@ -84,36 +84,30 @@
         const player = {
             x: 0,
             y: 0,
-            r: 16,
-            lookX: 0,  // направление взгляда
-            lookY: -1   // по умолчанию вверх
+            r: 20,
+            lookX: 0,
+            lookY: -1
         };
 
         // джойстик
         let drag = false;
         const maxDist = 35;
         const vec = { x: 0, y: 0 };
-        const SPEED = 4.5;
+        const SPEED = 5;
 
-        // препятствия (стены) - пустая зона 300 пикселей от центра
+        // МНОГО ПРЕПЯТСТВИЙ по всей карте
         const obstacles = [];
         
-        // генерируем стены на расстоянии
-        for (let i = 0; i < 25; i++) {
-            let x, y;
-            let dist;
-            
-            do {
-                x = (Math.random() - 0.5) * 1400;
-                y = (Math.random() - 0.5) * 1400;
-                dist = Math.hypot(x, y);
-            } while (dist < 350); // пустая зона радиусом 350
+        // генерируем 60 препятствий по всей карте
+        for (let i = 0; i < 60; i++) {
+            let x = (Math.random() - 0.5) * 2000;
+            let y = (Math.random() - 0.5) * 2000;
             
             obstacles.push({
-                x: x - 25,
-                y: y - 25,
-                w: 50 + Math.random() * 40,
-                h: 50 + Math.random() * 40
+                x: x - 30,
+                y: y - 30,
+                w: 60 + Math.random() * 50,
+                h: 60 + Math.random() * 50
             });
         }
 
@@ -130,11 +124,9 @@
 
         // движение со скольжением
         function move(dx, dy) {
-            if (dx === 0 && dy === 0) {
-                return;
-            }
+            if (dx === 0 && dy === 0) return;
             
-            // обновляем направление взгляда (если есть движение)
+            // обновляем направление взгляда
             if (Math.hypot(dx, dy) > 0.1) {
                 player.lookX = dx;
                 player.lookY = dy;
@@ -226,14 +218,6 @@
             const camX = player.x - 300;
             const camY = player.y - 300;
             
-            // пустая зона (для визуализации, можно убрать)
-            ctx.beginPath();
-            ctx.arc(300, 300, 350, 0, Math.PI*2);
-            ctx.strokeStyle = '#4a6080';
-            ctx.setLineDash([10, 15]);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
             // стены
             ctx.fillStyle = '#7d6b55';
             ctx.shadowColor = '#4a3f30';
@@ -247,7 +231,29 @@
                 }
             }
             
-            // игрок (всегда в центре)
+            // нормализуем направление взгляда
+            const lookLen = Math.hypot(player.lookX, player.lookY);
+            let normX = 0, normY = -1;
+            
+            if (lookLen > 0.1) {
+                normX = player.lookX / lookLen;
+                normY = player.lookY / lookLen;
+            }
+            
+            // базовые позиции глаз (центры глазных яблок)
+            const leftEyeX = 285;
+            const leftEyeY = 285;
+            const rightEyeX = 315;
+            const rightEyeY = 285;
+            
+            // смещение глаз в сторону движения (целые глазные яблоки двигаются)
+            const eyeOffset = 8;
+            const leftEyeOffsetX = normX * eyeOffset;
+            const leftEyeOffsetY = normY * eyeOffset;
+            const rightEyeOffsetX = normX * eyeOffset;
+            const rightEyeOffsetY = normY * eyeOffset;
+            
+            // рисуем игрока (прозрачный фон, чтобы глаза были видны)
             ctx.shadowBlur = 28;
             ctx.shadowColor = '#7fa3f0';
             ctx.beginPath();
@@ -259,47 +265,54 @@
             ctx.lineWidth = 4;
             ctx.stroke();
             
-            // глаза, которые смотрят в сторону движения
-            const lookLen = Math.hypot(player.lookX, player.lookY);
-            let eyeOffsetX = 0, eyeOffsetY = 0;
-            
-            if (lookLen > 0.1) {
-                // нормализуем и делаем смещение глаз
-                const normX = player.lookX / lookLen;
-                const normY = player.lookY / lookLen;
-                eyeOffsetX = normX * 6;
-                eyeOffsetY = normY * 6;
-            }
-            
+            // белки глаз (двигаются целиком)
             ctx.shadowBlur = 0;
             
-            // левый глаз
+            // левый глаз (белок)
             ctx.beginPath();
-            ctx.arc(290 + eyeOffsetX * 0.5, 290 + eyeOffsetY * 0.5, 5, 0, 2*Math.PI);
-            ctx.fillStyle = '#1f2535';
+            ctx.arc(leftEyeX + leftEyeOffsetX, leftEyeY + leftEyeOffsetY, 7, 0, 2*Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.strokeStyle = '#a0b0c0';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            
+            // правый глаз (белок)
+            ctx.beginPath();
+            ctx.arc(rightEyeX + rightEyeOffsetX, rightEyeY + rightEyeOffsetY, 7, 0, 2*Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.strokeStyle = '#a0b0c0';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            
+            // зрачки (чуть дополнительного смещения для живости)
+            const pupilOffset = 3;
+            const pupilLeftX = leftEyeX + leftEyeOffsetX + normX * pupilOffset;
+            const pupilLeftY = leftEyeY + leftEyeOffsetY + normY * pupilOffset;
+            const pupilRightX = rightEyeX + rightEyeOffsetX + normX * pupilOffset;
+            const pupilRightY = rightEyeY + rightEyeOffsetY + normY * pupilOffset;
+            
+            ctx.beginPath();
+            ctx.arc(pupilLeftX, pupilLeftY, 3.5, 0, 2*Math.PI);
+            ctx.fillStyle = '#1a1f2e';
             ctx.fill();
             
-            // правый глаз
             ctx.beginPath();
-            ctx.arc(310 + eyeOffsetX * 0.5, 290 + eyeOffsetY * 0.5, 5, 0, 2*Math.PI);
-            ctx.fillStyle = '#1f2535';
+            ctx.arc(pupilRightX, pupilRightY, 3.5, 0, 2*Math.PI);
+            ctx.fillStyle = '#1a1f2e';
             ctx.fill();
             
-            // зрачки (смещаются сильнее)
+            // блики
             ctx.beginPath();
-            ctx.arc(290 + eyeOffsetX, 290 + eyeOffsetY, 2.2, 0, 2*Math.PI);
-            ctx.fillStyle = 'white';
+            ctx.arc(pupilLeftX - 1, pupilLeftY - 1, 1.2, 0, 2*Math.PI);
+            ctx.fillStyle = '#ffffff';
             ctx.fill();
             
             ctx.beginPath();
-            ctx.arc(310 + eyeOffsetX, 290 + eyeOffsetY, 2.2, 0, 2*Math.PI);
-            ctx.fillStyle = 'white';
+            ctx.arc(pupilRightX - 1, pupilRightY - 1, 1.2, 0, 2*Math.PI);
+            ctx.fillStyle = '#ffffff';
             ctx.fill();
-
-            // подсказка
-            ctx.font = '12px monospace';
-            ctx.fillStyle = '#a5b9e0';
-            ctx.fillText('⚪ пустая зона в центре', 20, 40);
         }
 
         // цикл
