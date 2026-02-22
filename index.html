@@ -98,8 +98,8 @@
         }
         .counter {
             position: absolute;
-            top: 10px;
-            right: 15px;
+            bottom: 120px;
+            right: 45px;
             color: #d0e0d0;
             font-family: monospace;
             font-size: 14px;
@@ -144,7 +144,7 @@
         const deleteBtn = document.getElementById('deleteBtn');
         const counterDiv = document.getElementById('counter');
 
-        // игрок СТАРТУЕТ В (0, 0)
+        // игрок
         const player = {
             x: 0,
             y: 0,
@@ -157,40 +157,29 @@
         const vec = { x: 0, y: 0 };
         const SPEED = 5;
 
-        // последнее известное направление (для точки, когда палец не на джойстике)
-        let lastDir = { x: 0, y: -1 }; // по умолчанию вверх
+        // последнее известное направление
+        let lastDir = { x: 0, y: -1 };
 
-        // ФИКСИРОВАННЫЕ ПРЕПЯТСТВИЯ (темнее)
+        // ФИКСИРОВАННЫЕ ПРЕПЯТСТВИЯ
         const obstacles = [
-            // группа слева
             { x: -450, y: -320, w: 70, h: 70, type: 'stone' },
             { x: -520, y: 180, w: 85, h: 85, type: 'stone' },
             { x: -380, y: 450, w: 60, h: 60, type: 'stone' },
             { x: -600, y: -100, w: 90, h: 90, type: 'stone' },
-            
-            // группа справа
             { x: 400, y: -420, w: 75, h: 75, type: 'stone' },
             { x: 550, y: -200, w: 100, h: 100, type: 'stone' },
             { x: 480, y: 150, w: 65, h: 65, type: 'stone' },
             { x: 600, y: 350, w: 80, h: 80, type: 'stone' },
-            
-            // группа сверху
             { x: -200, y: -550, w: 95, h: 95, type: 'stone' },
             { x: 150, y: -600, w: 70, h: 70, type: 'stone' },
             { x: 350, y: -480, w: 85, h: 85, type: 'stone' },
-            
-            // группа снизу
             { x: -250, y: 550, w: 80, h: 80, type: 'stone' },
             { x: 200, y: 520, w: 90, h: 90, type: 'stone' },
             { x: 450, y: 600, w: 75, h: 75, type: 'stone' },
-            
-            // центральная группа (подальше от старта)
             { x: -150, y: -150, w: 60, h: 60, type: 'stone' },
             { x: 180, y: 180, w: 70, h: 70, type: 'stone' },
             { x: -200, y: 200, w: 65, h: 65, type: 'stone' },
             { x: 220, y: -180, w: 80, h: 80, type: 'stone' },
-            
-            // дополнительные камни
             { x: -400, y: -400, w: 100, h: 100, type: 'stone' },
             { x: 500, y: -500, w: 90, h: 90, type: 'stone' },
             { x: -500, y: 500, w: 85, h: 85, type: 'stone' },
@@ -199,8 +188,6 @@
             { x: 300, y: -300, w: 80, h: 80, type: 'stone' },
             { x: -300, y: 300, w: 75, h: 75, type: 'stone' },
             { x: 100, y: 400, w: 90, h: 90, type: 'stone' },
-            
-            // еще камни для разнообразия
             { x: -700, y: -200, w: 85, h: 85, type: 'stone' },
             { x: 700, y: 200, w: 95, h: 95, type: 'stone' },
             { x: -650, y: 650, w: 80, h: 80, type: 'stone' },
@@ -211,16 +198,14 @@
             { x: 100, y: 800, w: 80, h: 80, type: 'stone' }
         ];
 
-        // созданные игроком препятствия (голубые)
+        // созданные игроком препятствия
         let playerObstacles = [];
         const MAX_PLAYER_OBSTACLES = 10;
 
-        // обновление счетчика
         function updateCounter() {
             counterDiv.textContent = `${playerObstacles.length}/${MAX_PLAYER_OBSTACLES}`;
         }
 
-        // проверка столкновения со всеми препятствиями
         function canMoveTo(nx, ny, r) {
             for (let ob of obstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
@@ -235,11 +220,9 @@
                 const d = Math.hypot(nx - nearX, ny - nearY);
                 if (d < r) return false;
             }
-            
             return true;
         }
 
-        // движение со скольжением
         function move(dx, dy) {
             if (dx === 0 && dy === 0) return;
             
@@ -258,16 +241,16 @@
             }
         }
 
-        // создание нового препятствия
+        // создание препятствия (теперь не требует касания джойстика)
         function createObstacle() {
-            if (!drag) return;
             if (playerObstacles.length >= MAX_PLAYER_OBSTACLES) return;
             
-            const len = Math.hypot(vec.x, vec.y);
+            // используем последнее известное направление
+            const len = Math.hypot(lastDir.x, lastDir.y);
             if (len < 0.1) return;
             
-            const dirX = vec.x / len;
-            const dirY = vec.y / len;
+            const dirX = lastDir.x / len;
+            const dirY = lastDir.y / len;
             
             const createDist = player.r + 40;
             const newX = player.x + dirX * createDist;
@@ -302,11 +285,29 @@
             updateCounter();
         }
 
-        // удаление последнего созданного препятствия
-        function deleteLastObstacle() {
-            if (playerObstacles.length > 0) {
-                playerObstacles.pop();
-                updateCounter();
+        // удаление препятствия под точкой направления
+        function deleteObstacleAtDot() {
+            const len = Math.hypot(lastDir.x, lastDir.y);
+            if (len < 0.1) return;
+            
+            const dirX = lastDir.x / len;
+            const dirY = lastDir.y / len;
+            
+            // позиция точки направления
+            const dotDist = 12 + 25; // максимальное расстояние
+            const dotX = player.x + dirX * (player.r + dotDist);
+            const dotY = player.y + dirY * (player.r + dotDist);
+            
+            // ищем препятствие под точкой
+            for (let i = 0; i < playerObstacles.length; i++) {
+                const ob = playerObstacles[i];
+                // проверяем, попадает ли точка в препятствие
+                if (dotX >= ob.x && dotX <= ob.x + ob.w &&
+                    dotY >= ob.y && dotY <= ob.y + ob.h) {
+                    playerObstacles.splice(i, 1);
+                    updateCounter();
+                    return;
+                }
             }
         }
 
@@ -358,10 +359,11 @@
             
             thumbDiv.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
             
-            if (dist > 8) {
+            // ВСЕГДА обновляем вектор, даже при маленьком расстоянии
+            // просто он будет маленьким, но не нулевым
+            if (dist > 0.1) {
                 vec.x = dx / maxDist;
                 vec.y = dy / maxDist;
-                // сохраняем последнее направление
                 lastDir.x = vec.x;
                 lastDir.y = vec.y;
             } else {
@@ -390,11 +392,11 @@
 
         deleteBtn.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            deleteLastObstacle();
+            deleteObstacleAtDot();
         });
         deleteBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            deleteLastObstacle();
+            deleteObstacleAtDot();
         });
 
         joyDiv.addEventListener('mousedown', onStart);
@@ -408,18 +410,15 @@
         joyDiv.addEventListener('touchcancel', onEnd);
         joyDiv.addEventListener('contextmenu', e => e.preventDefault());
 
-        // отрисовка
         function draw() {
             ctx.clearRect(0, 0, 600, 600);
             
             const camX = player.x - 300;
             const camY = player.y - 300;
             
-            // травяной фон
             ctx.fillStyle = '#7cb57c';
             ctx.fillRect(0, 0, 600, 600);
             
-            // камни (темно-серые)
             ctx.fillStyle = '#5a4f4a';
             ctx.shadowColor = '#3a2f2a';
             ctx.shadowBlur = 18;
@@ -432,7 +431,6 @@
                 }
             }
             
-            // созданные игроком препятствия
             ctx.shadowColor = '#2a7080';
             for (let ob of playerObstacles) {
                 const screenX = ob.x - camX;
@@ -448,7 +446,6 @@
                 }
             }
             
-            // игрок
             ctx.shadowBlur = 28;
             ctx.shadowColor = '#4aa0c0';
             ctx.beginPath();
@@ -460,11 +457,9 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // точка направления (используем lastDir, когда не двигаемся)
+            // точка направления
             let dirToUse;
-            const moving = Math.hypot(vec.x, vec.y) > 0.1;
-            
-            if (moving) {
+            if (drag && Math.hypot(vec.x, vec.y) > 0) {
                 dirToUse = { x: vec.x, y: vec.y };
             } else {
                 dirToUse = { x: lastDir.x, y: lastDir.y };
@@ -475,7 +470,13 @@
                 const dirX = dirToUse.x / len;
                 const dirY = dirToUse.y / len;
                 
-                const distFromPlayer = 12 + (moving ? (len * 25) : 12); // если не двигаемся - ближе к игроку
+                // расстояние точки зависит от силы нажатия
+                let distFromPlayer;
+                if (drag) {
+                    distFromPlayer = 12 + (len * 25);
+                } else {
+                    distFromPlayer = 12 + 25; // максимальное, когда не двигаемся
+                }
                 
                 const dotX = 300 + dirX * (player.r + distFromPlayer);
                 const dotY = 300 + dirY * (player.r + distFromPlayer);
@@ -487,7 +488,6 @@
                 ctx.fill();
             }
 
-            // точка спавна
             ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(300 - player.x, 300 - player.y, 14, 0, 2*Math.PI);
@@ -499,7 +499,11 @@
         }
 
         function loop() {
-            move(vec.x * SPEED, vec.y * SPEED);
+            if (drag) {
+                // двигаемся с учетом силы нажатия (даже если вектор маленький)
+                move(vec.x * SPEED, vec.y * SPEED);
+            }
+            // если не drag - не двигаемся
             updateCoords();
             draw();
             requestAnimationFrame(loop);
