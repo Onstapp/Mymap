@@ -226,6 +226,20 @@
             padding: 4px 8px;
             border-radius: 10px;
         }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #a0d0a0;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
@@ -290,12 +304,28 @@
             colorGrid.appendChild(div);
         });
         
-        // PeerJS соединение
+        // PeerJS соединение с ключом
+        const peerOptions = {
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
+            secure: true,
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' }
+                ]
+            }
+        };
+        
         let peer = null;
         let connections = new Map();
         let players = new Map();
         let isHost = false;
-        const ROOM_ID = 'mymap_room_fixed'; // уникальное имя комнаты
+        const ROOM_ID = 'mymap_room_' + Math.random().toString(36).substr(2, 8); // уникальная комната при каждом запуске
         
         // Статические препятствия
         const staticObstacles = [];
@@ -361,15 +391,15 @@
             
             myName = name;
             
-            // Сначала пытаемся стать хостом
-            tryToBecomeHost();
-        }
-        
-        function tryToBecomeHost() {
-            peer = new Peer(ROOM_ID);
+            // Показываем загрузку
+            document.getElementById('startBtn').innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
+            document.getElementById('startBtn').disabled = true;
             
-            peer.on('open', () => {
-                // Успешно стали хостом
+            // Создаем peer
+            peer = new Peer(peerOptions);
+            
+            peer.on('open', (id) => {
+                // Успешно создали peer
                 isHost = true;
                 
                 players.set(myId, {
@@ -383,6 +413,9 @@
                 
                 showGame();
                 updatePlayerCount();
+                
+                // Показываем ID комнаты для подключения
+                document.getElementById('errorMsg').innerHTML = `Комната создана! ID: ${id}<br>Скажи другим ввести этот ID в консоль (F12) и набрать: connectToRoom('${id}')`;
                 
                 // Слушаем подключения
                 peer.on('connection', (conn) => {
@@ -406,20 +439,27 @@
             });
             
             peer.on('error', (err) => {
-                // Не удалось стать хостом - подключаемся как клиент
-                if (err.type === 'unavailable-id') {
-                    connectAsClient();
-                } else {
-                    document.getElementById('errorMsg').textContent = 'Ошибка подключения';
-                }
+                document.getElementById('errorMsg').textContent = 'Ошибка: ' + err.type;
+                document.getElementById('startBtn').innerHTML = 'НАЧАТЬ';
+                document.getElementById('startBtn').disabled = false;
             });
         }
         
-        function connectAsClient() {
-            peer = new Peer();
+        // Функция для подключения других игроков (вызывается из консоли)
+        window.connectToRoom = function(hostId) {
+            const name = document.getElementById('nameInput').value.trim();
+            
+            if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
+                document.getElementById('errorMsg').textContent = 'Недопустимое имя';
+                return;
+            }
+            
+            myName = name;
+            
+            peer = new Peer(peerOptions);
             
             peer.on('open', () => {
-                const conn = peer.connect(ROOM_ID);
+                const conn = peer.connect(hostId);
                 
                 conn.on('open', () => {
                     connections.set(conn.peer, conn);
