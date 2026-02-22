@@ -50,11 +50,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 28px;
-            color: #d0e0d0;
             cursor: pointer;
             touch-action: none;
             transition: 0.05s linear;
+            font-size: 32px;
+            color: #ff6b6b;
         }
         .action-btn:active {
             transform: translateY(5px);
@@ -98,17 +98,16 @@
         }
         .counter {
             position: absolute;
-            top: 45px;
-            right: 55px;
-            background: #2a3a2a;
+            top: 10px;
+            right: 15px;
             color: #d0e0d0;
             font-family: monospace;
-            font-size: 22px;
-            font-weight: bold;
-            padding: 8px 16px;
-            border-radius: 30px;
-            box-shadow: 0 5px 0 #1a2a1a;
-            border: 2px solid #4a7a4a;
+            font-size: 14px;
+            font-weight: normal;
+            background: transparent;
+            padding: 4px 8px;
+            border: 1px solid #5a7a5a;
+            border-radius: 12px;
             z-index: 10;
         }
         .game-wrapper {
@@ -124,13 +123,13 @@
         <canvas id="world" width="600" height="600"></canvas>
     </div>
     <div class="controls">
-        <div class="action-btn" id="deleteBtn">🗑️</div>
+        <div class="action-btn" id="deleteBtn">✕</div>
         <div class="joystick-wrapper">
             <div class="joystick" id="joystick">
                 <div class="thumb" id="thumb"></div>
             </div>
         </div>
-        <div class="action-btn" id="createBtn">➕</div>
+        <div class="action-btn" id="createBtn"></div>
     </div>
 </div>
 
@@ -157,6 +156,9 @@
         const maxDist = 35;
         const vec = { x: 0, y: 0 };
         const SPEED = 5;
+
+        // последнее известное направление (для точки, когда палец не на джойстике)
+        let lastDir = { x: 0, y: -1 }; // по умолчанию вверх
 
         // ФИКСИРОВАННЫЕ ПРЕПЯТСТВИЯ (темнее)
         const obstacles = [
@@ -218,9 +220,8 @@
             counterDiv.textContent = `${playerObstacles.length}/${MAX_PLAYER_OBSTACLES}`;
         }
 
-        // проверка столкновения со всеми препятствиями (и каменными, и голубыми)
+        // проверка столкновения со всеми препятствиями
         function canMoveTo(nx, ny, r) {
-            // проверка каменных препятствий
             for (let ob of obstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
                 const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
@@ -228,7 +229,6 @@
                 if (d < r) return false;
             }
             
-            // проверка созданных игроком препятствий
             for (let ob of playerObstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
                 const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
@@ -260,25 +260,19 @@
 
         // создание нового препятствия
         function createObstacle() {
-            // проверяем, двигается ли игрок (касается ли джойстика)
             if (!drag) return;
-            
-            // проверяем лимит
             if (playerObstacles.length >= MAX_PLAYER_OBSTACLES) return;
             
-            // позиция перед игроком (куда он смотрит)
             const len = Math.hypot(vec.x, vec.y);
-            if (len < 0.1) return; // не двигается
+            if (len < 0.1) return;
             
             const dirX = vec.x / len;
             const dirY = vec.y / len;
             
-            // создаем препятствие чуть дальше точки направления
             const createDist = player.r + 40;
             const newX = player.x + dirX * createDist;
             const newY = player.y + dirY * createDist;
             
-            // проверяем, не пересекается ли с другими препятствиями
             const tempObstacle = {
                 x: newX - 22,
                 y: newY - 22,
@@ -286,21 +280,17 @@
                 h: 44
             };
             
-            // проверка столкновения с камнями
             for (let ob of obstacles) {
                 if (rectCollide(tempObstacle, ob)) return;
             }
             
-            // проверка с другими созданными препятствиями
             for (let ob of playerObstacles) {
                 if (rectCollide(tempObstacle, ob)) return;
             }
             
-            // проверка с игроком
             const d = Math.hypot(newX - player.x, newY - player.y);
             if (d < player.r + 22) return;
             
-            // добавляем
             playerObstacles.push({
                 x: newX - 22,
                 y: newY - 22,
@@ -320,7 +310,6 @@
             }
         }
 
-        // вспомогательная функция для проверки пересечения прямоугольников
         function rectCollide(r1, r2) {
             return !(r2.x >= r1.x + r1.w ||
                      r2.x + r2.w <= r1.x ||
@@ -328,7 +317,6 @@
                      r2.y + r2.h <= r1.y);
         }
 
-        // обновление координат на экране
         function updateCoords() {
             const x = Math.round(player.x);
             const y = Math.round(player.y);
@@ -373,6 +361,9 @@
             if (dist > 8) {
                 vec.x = dx / maxDist;
                 vec.y = dy / maxDist;
+                // сохраняем последнее направление
+                lastDir.x = vec.x;
+                lastDir.y = vec.y;
             } else {
                 vec.x = 0;
                 vec.y = 0;
@@ -406,7 +397,6 @@
             deleteLastObstacle();
         });
 
-        // события джойстика
         joyDiv.addEventListener('mousedown', onStart);
         joyDiv.addEventListener('mousemove', onMove);
         joyDiv.addEventListener('mouseup', onEnd);
@@ -430,7 +420,7 @@
             ctx.fillRect(0, 0, 600, 600);
             
             // камни (темно-серые)
-            ctx.fillStyle = '#5a4f4a';  // темнее
+            ctx.fillStyle = '#5a4f4a';
             ctx.shadowColor = '#3a2f2a';
             ctx.shadowBlur = 18;
             
@@ -442,7 +432,7 @@
                 }
             }
             
-            // созданные игроком препятствия (голубые, круглые)
+            // созданные игроком препятствия
             ctx.shadowColor = '#2a7080';
             for (let ob of playerObstacles) {
                 const screenX = ob.x - camX;
@@ -450,7 +440,7 @@
                 if (screenX + ob.w > -50 && screenX < 650 && screenY + ob.h > -50 && screenY < 650) {
                     ctx.beginPath();
                     ctx.arc(screenX + ob.w/2, screenY + ob.h/2, ob.w/2, 0, Math.PI*2);
-                    ctx.fillStyle = '#5fa0c0';  // голубой, но темнее чтобы не сливался
+                    ctx.fillStyle = '#5fa0c0';
                     ctx.fill();
                     ctx.strokeStyle = '#3f7080';
                     ctx.lineWidth = 2;
@@ -458,7 +448,7 @@
                 }
             }
             
-            // игрок (голубой)
+            // игрок
             ctx.shadowBlur = 28;
             ctx.shadowColor = '#4aa0c0';
             ctx.beginPath();
@@ -470,15 +460,22 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // точка направления (темно-серая, без бликов)
+            // точка направления (используем lastDir, когда не двигаемся)
+            let dirToUse;
             const moving = Math.hypot(vec.x, vec.y) > 0.1;
             
             if (moving) {
-                const len = Math.hypot(vec.x, vec.y);
-                const dirX = vec.x / len;
-                const dirY = vec.y / len;
+                dirToUse = { x: vec.x, y: vec.y };
+            } else {
+                dirToUse = { x: lastDir.x, y: lastDir.y };
+            }
+            
+            const len = Math.hypot(dirToUse.x, dirToUse.y);
+            if (len > 0.1) {
+                const dirX = dirToUse.x / len;
+                const dirY = dirToUse.y / len;
                 
-                const distFromPlayer = 12 + (len * 25);
+                const distFromPlayer = 12 + (moving ? (len * 25) : 12); // если не двигаемся - ближе к игроку
                 
                 const dotX = 300 + dirX * (player.r + distFromPlayer);
                 const dotY = 300 + dirY * (player.r + distFromPlayer);
@@ -486,11 +483,11 @@
                 ctx.shadowBlur = 0;
                 ctx.beginPath();
                 ctx.arc(dotX, dotY, 6, 0, Math.PI*2);
-                ctx.fillStyle = '#6a6a6a';  // темно-серая
+                ctx.fillStyle = '#6a6a6a';
                 ctx.fill();
             }
 
-            // большая прозрачная белая точка в центре мира (0,0)
+            // точка спавна
             ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(300 - player.x, 300 - player.y, 14, 0, 2*Math.PI);
@@ -501,7 +498,6 @@
             ctx.stroke();
         }
 
-        // цикл
         function loop() {
             move(vec.x * SPEED, vec.y * SPEED);
             updateCoords();
