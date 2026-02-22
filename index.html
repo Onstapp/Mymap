@@ -110,13 +110,32 @@
         }
         #roomIdDisplay {
             text-align: center;
-            margin: 5px 0 15px 0;  /* Уменьшен верхний отступ, чтобы поднять выше */
-            font-size: 24px;
+            margin: 5px 0 15px 0;
+            font-size: 32px;
+            font-weight: bold;
             color: #ffffa0;
             background: #1a2a1a;
-            padding: 10px;
+            padding: 15px;
             border-radius: 30px;
-            border: 2px solid #5a7a5a;
+            border: 3px solid #7cb57c;
+            letter-spacing: 5px;
+        }
+        #joinIdInput {
+            width: 100%;
+            padding: 15px;
+            background: #1a2a1a;
+            border: 3px solid #4a7a4a;
+            border-radius: 30px;
+            color: #d0e0d0;
+            font-size: 24px;
+            font-family: monospace;
+            outline: none;
+            text-align: center;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+        }
+        #joinIdInput:focus {
+            border-color: #7cb57c;
         }
         #errorMsg {
             color: #ff8888;
@@ -135,17 +154,18 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 5px;  /* Уменьшен отступ */
+            gap: 5px;
             margin-bottom: 12px;
         }
         .room-id-header {
-            font-size: 18px;
+            font-size: 24px;
+            font-weight: bold;
             color: #ffffa0;
             background: #1a2a1a;
-            padding: 5px 15px;
-            border-radius: 20px;
-            border: 1px solid #5a7a5a;
-            margin-bottom: 5px;
+            padding: 8px 20px;
+            border-radius: 30px;
+            border: 2px solid #7cb57c;
+            letter-spacing: 3px;
         }
         .header-buttons {
             display: flex;
@@ -398,8 +418,12 @@
             <div class="color-grid" id="colorGrid"></div>
         </div>
         <button id="createRoomBtn">СОЗДАТЬ КОМНАТУ</button>
-        <button id="joinRoomBtn">ПРИСОЕДИНИТЬСЯ</button>
+        <button id="showJoinBtn">ПРИСОЕДИНИТЬСЯ</button>
         <div id="roomIdDisplay" style="display: none;"></div>
+        <div id="joinPanel" style="display: none; margin-top: 15px;">
+            <input type="text" id="joinIdInput" maxlength="6" placeholder="000000">
+            <button id="joinBtn" style="width:100%; padding:15px; background:#4a7a4a; border:none; border-radius:40px; color:#d0e0d0; font-size:20px; font-weight:bold; cursor:pointer; box-shadow:0 6px 0 #1a2a1a;">ПОДКЛЮЧИТЬСЯ</button>
+        </div>
         <div id="errorMsg"></div>
     </div>
 
@@ -477,29 +501,13 @@
             colorGrid.appendChild(div);
         });
         
-        // Альтернативный PeerJS сервер
+        // Простые настройки PeerJS
         const peerOptions = {
-            host: 'peerjs-server.herokuapp.com',
-            port: 443,
-            path: '/',
-            secure: true,
-            config: {
-                'iceServers': [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' }
-                ]
-            }
-        };
-        
-        // Запасной вариант на случай ошибки
-        const fallbackPeerOptions = {
             host: '0.peerjs.com',
             port: 443,
             path: '/',
-            secure: true
+            secure: true,
+            debug: 2
         };
         
         let peer = null;
@@ -574,6 +582,16 @@
         const cancelCode = document.getElementById('cancelCode');
         const roomIdDisplay = document.getElementById('roomIdDisplay');
         const inGameRoomId = document.getElementById('inGameRoomId');
+        const joinPanel = document.getElementById('joinPanel');
+        const joinIdInput = document.getElementById('joinIdInput');
+        const joinBtn = document.getElementById('joinBtn');
+        const showJoinBtn = document.getElementById('showJoinBtn');
+        
+        // Показать панель присоединения
+        showJoinBtn.onclick = () => {
+            joinPanel.style.display = 'block';
+            joinIdInput.focus();
+        };
         
         // Создание комнаты
         document.getElementById('createRoomBtn').onclick = () => {
@@ -583,23 +601,20 @@
             
             myName = name;
             
-            // Показываем загрузку
             document.getElementById('createRoomBtn').innerHTML = 'СОЗДАНИЕ <span class="loading"></span>';
             document.getElementById('createRoomBtn').disabled = true;
             
-            // Пробуем первый сервер
-            tryCreatePeer(peerOptions, 0);
-        };
-        
-        function tryCreatePeer(options, attempt) {
-            peer = new Peer(options);
+            // Генерируем короткий цифровой ID
+            const shortId = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            peer = new Peer(shortId, peerOptions);
             
             peer.on('open', (id) => {
                 roomId = id;
                 isHost = true;
                 
                 roomIdDisplay.style.display = 'block';
-                roomIdDisplay.textContent = `КОМНАТА: ${roomId}`;
+                roomIdDisplay.textContent = id;
                 
                 players.set(myId, {
                     id: myId,
@@ -633,40 +648,51 @@
             
             peer.on('error', (err) => {
                 console.log('Peer error:', err);
-                
-                if (attempt === 0) {
-                    // Пробуем запасной сервер
-                    tryCreatePeer(fallbackPeerOptions, 1);
+                if (err.type === 'unavailable-id') {
+                    // ID занят, пробуем другой
+                    document.getElementById('createRoomBtn').click();
                 } else {
                     document.getElementById('errorMsg').textContent = 'Ошибка подключения к серверу';
                     document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
                     document.getElementById('createRoomBtn').disabled = false;
                 }
             });
-        }
+        };
         
         // Присоединение к комнате
-        document.getElementById('joinRoomBtn').onclick = () => {
+        joinBtn.onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
-            const id = prompt('Введите ID комнаты:');
+            const id = joinIdInput.value.trim();
             
-            if (!id || !validateName(name)) return;
+            if (!id || id.length !== 6 || !/^\d+$/.test(id)) {
+                document.getElementById('errorMsg').textContent = 'Введите 6-значный цифровой ID';
+                return;
+            }
+            
+            if (!validateName(name)) return;
             
             myName = name;
             
-            document.getElementById('joinRoomBtn').innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
-            document.getElementById('joinRoomBtn').disabled = true;
+            joinBtn.innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
+            joinBtn.disabled = true;
             
-            tryJoinPeer(id, peerOptions, 0);
-        };
-        
-        function tryJoinPeer(roomId, options, attempt) {
-            peer = new Peer(options);
+            peer = new Peer(peerOptions);
             
             peer.on('open', () => {
-                conn = peer.connect(roomId);
+                conn = peer.connect(id);
+                
+                // Таймаут подключения
+                const timeout = setTimeout(() => {
+                    if (!conn.open) {
+                        document.getElementById('errorMsg').textContent = 'Таймаут подключения';
+                        joinBtn.innerHTML = 'ПОДКЛЮЧИТЬСЯ';
+                        joinBtn.disabled = false;
+                        peer.destroy();
+                    }
+                }, 10000);
                 
                 conn.on('open', () => {
+                    clearTimeout(timeout);
                     isHost = false;
                     
                     conn.on('data', (data) => {
@@ -698,20 +724,22 @@
                         r: 18
                     });
                 });
+                
+                conn.on('error', () => {
+                    clearTimeout(timeout);
+                    document.getElementById('errorMsg').textContent = 'Не удалось подключиться';
+                    joinBtn.innerHTML = 'ПОДКЛЮЧИТЬСЯ';
+                    joinBtn.disabled = false;
+                });
             });
             
             peer.on('error', (err) => {
                 console.log('Peer error:', err);
-                
-                if (attempt === 0) {
-                    tryJoinPeer(roomId, fallbackPeerOptions, 1);
-                } else {
-                    document.getElementById('errorMsg').textContent = 'Не удалось подключиться к комнате';
-                    document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
-                    document.getElementById('joinRoomBtn').disabled = false;
-                }
+                document.getElementById('errorMsg').textContent = 'Ошибка подключения';
+                joinBtn.innerHTML = 'ПОДКЛЮЧИТЬСЯ';
+                joinBtn.disabled = false;
             });
-        }
+        };
         
         function validateName(name) {
             if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
@@ -784,20 +812,20 @@
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
             
-            // Показываем ID комнаты в игре над координатами
             if (isHost) {
                 inGameRoomId.style.display = 'block';
-                inGameRoomId.textContent = `🏠 КОМНАТА: ${roomId}`;
+                inGameRoomId.textContent = roomId;
             }
             
-            connectionStatus.textContent = `🟢 Подключено: ${roomId}`;
+            connectionStatus.textContent = `🟢 Подключено`;
             updatePlayerList();
             updateCounter();
             
             document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
             document.getElementById('createRoomBtn').disabled = false;
-            document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
-            document.getElementById('joinRoomBtn').disabled = false;
+            joinBtn.innerHTML = 'ПОДКЛЮЧИТЬСЯ';
+            joinBtn.disabled = false;
+            joinPanel.style.display = 'none';
         }
         
         function resetGame() {
@@ -819,6 +847,7 @@
             document.getElementById('loginScreen').style.display = 'block';
             roomIdDisplay.style.display = 'none';
             inGameRoomId.style.display = 'none';
+            joinPanel.style.display = 'none';
             
             player.x = 0;
             player.y = 0;
