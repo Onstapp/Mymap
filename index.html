@@ -123,8 +123,9 @@
         }
         .game-header {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            gap: 10px;
             margin-bottom: 12px;
         }
         .exit-btn {
@@ -132,17 +133,26 @@
             color: #ffb0b0;
             border: none;
             border-radius: 30px;
-            padding: 8px 20px;
-            font-size: 18px;
+            padding: 6px 30px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 0 #2a1a1a;
             transition: 0.05s linear;
             font-family: monospace;
+            width: fit-content;
         }
         .exit-btn:active {
             transform: translateY(3px);
             box-shadow: 0 1px 0 #2a1a1a;
+        }
+        .coords {
+            color: #d0e0d0;
+            font-family: monospace;
+            font-size: 18px;
+            text-align: center;
+            text-shadow: 2px 2px 0 #1a2a1a;
+            letter-spacing: 2px;
         }
         canvas {
             display: block;
@@ -207,52 +217,42 @@
             transition: transform 0.02s;
             will-change: transform;
         }
-        .coords {
-            color: #d0e0d0;
-            font-family: monospace;
-            font-size: 18px;
-            text-align: center;
-            text-shadow: 2px 2px 0 #1a2a1a;
-            letter-spacing: 2px;
-        }
-        .counter {
-            position: absolute;
-            top: 40px;
-            right: 20px;
-            color: #d0e0d0;
-            font-family: monospace;
-            font-size: 14px;
-            font-weight: normal;
-            background: transparent;
-            padding: 4px 8px;
-            border: 1px solid #5a7a5a;
-            border-radius: 12px;
-            z-index: 10;
-            text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
-        }
-        .game-wrapper {
-            position: relative;
-        }
-        .connection-info {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            color: #a0d0a0;
-            font-size: 12px;
-            background: #1a2a1a80;
-            padding: 4px 8px;
-            border-radius: 10px;
-        }
-        .player-list {
+        .info-panel {
             position: absolute;
             top: 10px;
             left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .player-list {
             color: #a0d0a0;
             font-size: 12px;
             background: #1a2a1a80;
-            padding: 4px 8px;
+            padding: 6px 10px;
             border-radius: 10px;
-            max-width: 200px;
+            max-width: 180px;
+            pointer-events: none;
+            backdrop-filter: blur(2px);
+            border: 1px solid #5a7a5a;
+        }
+        .counter {
+            color: #d0e0d0;
+            font-size: 14px;
+            font-weight: normal;
+            background: #1a2a1a80;
+            padding: 6px 12px;
+            border: 1px solid #5a7a5a;
+            border-radius: 12px;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+            pointer-events: none;
+            backdrop-filter: blur(2px);
+        }
+        .game-wrapper {
+            position: relative;
         }
     </style>
 </head>
@@ -261,7 +261,7 @@
         <h2>MYMAP</h2>
         <div class="input-group">
             <label>ТВОЁ ИМЯ (3-20 символов, a-z, 0-9, _)</label>
-            <input type="text" id="nameInput" maxlength="20" placeholder="Player_1" value="Player_1">
+            <input type="text" id="nameInput" maxlength="20">
         </div>
         <div class="input-group">
             <label>ЦВЕТ</label>
@@ -277,9 +277,11 @@
             <button class="exit-btn" id="exitBtn">ВЫХОД</button>
         </div>
         <div class="game-wrapper">
-            <div class="counter" id="counter">0/10</div>
+            <div class="info-panel">
+                <div class="player-list" id="playerList"></div>
+                <div class="counter" id="counter">0/10</div>
+            </div>
             <canvas id="world" width="600" height="600"></canvas>
-            <div class="player-list" id="playerList"></div>
         </div>
         <div class="controls">
             <div class="action-buttons">
@@ -295,6 +297,15 @@
     </div>
 
     <script>
+        // Генерируем случайное число от 1 до 999 с ведущими нулями
+        function getRandomPlayerNumber() {
+            const num = Math.floor(Math.random() * 999) + 1;
+            return num.toString().padStart(3, '0');
+        }
+        
+        // Устанавливаем значение по умолчанию
+        document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
+        
         // Цвета
         const colors = [
             'white', 'black', 'red', 'orange', 'yellow',
@@ -331,6 +342,7 @@
                 try {
                     const data = JSON.parse(saved);
                     if (data.players) {
+                        players.clear();
                         data.players.forEach(p => players.set(p.id, p));
                     }
                     if (data.obstacles) {
