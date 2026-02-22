@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>кружок · физика</title>
+    <title>кружок · свободно</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
             -webkit-tap-highlight-color: transparent;
         }
         body {
-            background: #0b0e17;
+            background: #0c101a;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -21,43 +21,43 @@
             touch-action: none;
         }
         .game {
-            background: #141c2a;
-            border-radius: 44px;
-            padding: 22px;
-            box-shadow: 0 25px 40px #000000cc;
+            background: #16202e;
+            border-radius: 48px;
+            padding: 24px;
+            box-shadow: 0 30px 45px #000000d9;
         }
         canvas {
             display: block;
-            width: min(340px, 75vw);
-            height: min(340px, 75vw);
-            background: #20283d;
+            width: min(330px, 70vw);
+            height: min(330px, 70vw);
+            background: #222c42;
             border-radius: 36px;
-            box-shadow: inset 0 0 0 3px #31405b;
+            box-shadow: inset 0 0 0 3px #344561;
         }
         .pad {
             display: flex;
             justify-content: center;
-            margin-top: 20px;
+            margin-top: 22px;
         }
         .joystick {
-            width: min(130px, 28vw);
-            height: min(130px, 28vw);
-            background: #1e253c;
+            width: min(125px, 26vw);
+            height: min(125px, 26vw);
+            background: #1e263f;
             border-radius: 999px;
-            box-shadow: 0 8px 0 #0f1323, inset 0 -3px 12px #2e3a5a;
+            box-shadow: 0 9px 0 #11162a, inset 0 -4px 14px #2f3e64;
             position: relative;
             touch-action: none;
         }
         .thumb {
             position: absolute;
-            width: 46px;
-            height: 46px;
-            background: #bed5ff;
+            width: 44px;
+            height: 44px;
+            background: #b8d2ff;
             border-radius: 999px;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 7px 14px #1b2140, 0 0 0 4px #34436b;
+            box-shadow: 0 8px 16px #1d2448, 0 0 0 4px #314672;
             transition: transform 0.02s;
             will-change: transform;
         }
@@ -84,30 +84,36 @@
         const player = {
             x: 0,
             y: 0,
-            r: 16
+            r: 14
         };
 
         // джойстик
         let drag = false;
-        const maxDist = 32;
+        const maxDist = 30;
         const vec = { x: 0, y: 0 };
-        const SPEED = 4.2;
+        const SPEED = 3.8;
 
-        // карта препятствий
+        // препятствия (редкие)
         const blocks = new Map();
-        const BLOCK = 48;
+        const BLOCK = 50;
 
-        // генерация блока
+        // генерация блока - ТОЛЬКО 15% заполненность
         function getBlock(wx, wy) {
             const gx = Math.floor(wx / BLOCK) * BLOCK;
             const gy = Math.floor(wy / BLOCK) * BLOCK;
-            const key = gx + ':' + gy;
+            const key = gx + '|' + gy;
             
             if (blocks.has(key)) return blocks.get(key);
             
-            const h = (gx * 73856093) ^ (gy * 19349663);
-            if (h % 4 === 0) {
-                const b = { x: gx, y: gy, w: BLOCK, h: BLOCK };
+            // случайно, но стабильно для координат
+            const hash = Math.abs(gx * 374761393 + gy * 668265263) % 100;
+            if (hash < 15) { // 15% стен, 85% пустота
+                const b = { 
+                    x: gx, 
+                    y: gy, 
+                    w: BLOCK * 0.8, // чуть меньше, чтобы не слипались
+                    h: BLOCK * 0.8
+                };
                 blocks.set(key, b);
                 return b;
             } else {
@@ -116,7 +122,7 @@
             }
         }
 
-        // проверка столкновения (true если можно двигаться)
+        // проверка столкновения
         function canMoveTo(nx, ny, r) {
             const minX = Math.floor((nx - r) / BLOCK);
             const maxX = Math.floor((nx + r) / BLOCK);
@@ -137,29 +143,26 @@
             return true;
         }
 
-        // ИСПРАВЛЕНО: движение с норм физикой (скольжение вдоль стен)
+        // движение со скольжением
         function move(dx, dy) {
             if (dx === 0 && dy === 0) return;
             
-            // пробуем движение по диагонали целиком
             if (canMoveTo(player.x + dx, player.y + dy, player.r)) {
                 player.x += dx;
                 player.y += dy;
                 return;
             }
             
-            // пробуем только X
             if (canMoveTo(player.x + dx, player.y, player.r)) {
                 player.x += dx;
             }
             
-            // пробуем только Y
             if (canMoveTo(player.x, player.y + dy, player.r)) {
                 player.y += dy;
             }
         }
 
-        // ----- джойстик -----
+        // джойстик
         function onStart(e) {
             e.preventDefault();
             drag = true;
@@ -194,7 +197,7 @@
             
             thumbDiv.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
             
-            if (dist > 6) {
+            if (dist > 7) {
                 vec.x = dx / maxDist;
                 vec.y = dy / maxDist;
             } else {
@@ -230,10 +233,10 @@
             const camX = player.x - 250;
             const camY = player.y - 250;
             
-            // стены
-            ctx.fillStyle = '#7a6852';
-            ctx.shadowColor = '#493e2f';
-            ctx.shadowBlur = 18;
+            // стены (редкие)
+            ctx.fillStyle = '#7d6b55';
+            ctx.shadowColor = '#4a3f30';
+            ctx.shadowBlur = 16;
             
             const sx = Math.floor((camX - BLOCK) / BLOCK);
             const ex = Math.floor((camX + 500 + BLOCK) / BLOCK);
@@ -249,33 +252,33 @@
             }
             
             // игрок
-            ctx.shadowBlur = 24;
-            ctx.shadowColor = '#88adff';
+            ctx.shadowBlur = 26;
+            ctx.shadowColor = '#7fa3f0';
             ctx.beginPath();
             ctx.arc(250, 250, player.r, 0, Math.PI*2);
-            ctx.fillStyle = '#e2efff';
+            ctx.fillStyle = '#dceeff';
             ctx.fill();
-            ctx.shadowBlur = 8;
-            ctx.strokeStyle = 'white';
+            ctx.shadowBlur = 9;
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // глаза
+            // глазки
             ctx.shadowBlur = 0;
             ctx.beginPath();
-            ctx.arc(240, 240, 4, 0, 2*Math.PI);
-            ctx.fillStyle = '#202530';
+            ctx.arc(241, 241, 4, 0, 2*Math.PI);
+            ctx.fillStyle = '#1f2535';
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(260, 240, 4, 0, 2*Math.PI);
+            ctx.arc(259, 241, 4, 0, 2*Math.PI);
             ctx.fill();
             
             ctx.beginPath();
-            ctx.arc(242, 238, 1.8, 0, 2*Math.PI);
+            ctx.arc(243, 239, 1.8, 0, 2*Math.PI);
             ctx.fillStyle = 'white';
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(262, 238, 1.8, 0, 2*Math.PI);
+            ctx.arc(261, 239, 1.8, 0, 2*Math.PI);
             ctx.fill();
         }
 
