@@ -234,7 +234,7 @@
         <h2>MYMAP</h2>
         <div class="input-group">
             <label>ТВОЁ ИМЯ (3-20 символов, a-z, 0-9, _)</label>
-            <input type="text" id="nameInput" maxlength="20" placeholder="Player_1">
+            <input type="text" id="nameInput" maxlength="20" placeholder="Player_1" value="Player_1">
         </div>
         <div class="input-group">
             <label>ЦВЕТ</label>
@@ -295,7 +295,7 @@
         let connections = new Map();
         let players = new Map();
         let isHost = false;
-        const ROOM_ID = 'mymap_room'; // фиксированная комната
+        const ROOM_ID = 'mymap_room_fixed'; // уникальное имя комнаты
         
         // Статические препятствия
         const staticObstacles = [];
@@ -321,7 +321,7 @@
             
             staticObstacles.push({
                 x: x - w/2,
-                y: y - w/2,
+                y: y - h/2,
                 w, h
             });
         }
@@ -361,17 +361,78 @@
             
             myName = name;
             
+            // Сначала пытаемся стать хостом
+            tryToBecomeHost();
+        }
+        
+        function tryToBecomeHost() {
+            peer = new Peer(ROOM_ID);
+            
+            peer.on('open', () => {
+                // Успешно стали хостом
+                isHost = true;
+                
+                players.set(myId, {
+                    id: myId,
+                    name: myName,
+                    color: selectedColor,
+                    x: 0, y: 0,
+                    lastDir: { x: 0, y: -1 },
+                    r: 18
+                });
+                
+                showGame();
+                updatePlayerCount();
+                
+                // Слушаем подключения
+                peer.on('connection', (conn) => {
+                    connections.set(conn.peer, conn);
+                    
+                    conn.on('data', (data) => {
+                        handleData(conn.peer, data);
+                    });
+                    
+                    conn.on('close', () => {
+                        connections.delete(conn.peer);
+                    });
+                    
+                    // Отправляем текущее состояние
+                    conn.send({
+                        type: 'init',
+                        players: Array.from(players.values()),
+                        obstacles: playerObstacles
+                    });
+                });
+            });
+            
+            peer.on('error', (err) => {
+                // Не удалось стать хостом - подключаемся как клиент
+                if (err.type === 'unavailable-id') {
+                    connectAsClient();
+                } else {
+                    document.getElementById('errorMsg').textContent = 'Ошибка подключения';
+                }
+            });
+        }
+        
+        function connectAsClient() {
             peer = new Peer();
             
             peer.on('open', () => {
-                // Пытаемся подключиться к хосту
                 const conn = peer.connect(ROOM_ID);
                 
                 conn.on('open', () => {
-                    // Подключились как клиент
-                    isHost = false;
                     connections.set(conn.peer, conn);
                     
+                    conn.on('data', (data) => {
+                        handleData(conn.peer, data);
+                    });
+                    
+                    conn.on('close', () => {
+                        connections.delete(conn.peer);
+                    });
+                    
+                    // Отправляем информацию о себе
                     conn.send({
                         type: 'join',
                         player: {
@@ -379,7 +440,8 @@
                             name: myName,
                             color: selectedColor,
                             x: 0, y: 0,
-                            lastDir: { x: 0, y: -1 }
+                            lastDir: { x: 0, y: -1 },
+                            r: 18
                         }
                     });
                     
@@ -393,53 +455,8 @@
                     });
                 });
                 
-                conn.on('data', (data) => {
-                    handleData(conn.peer, data);
-                });
-                
                 conn.on('error', () => {
-                    // Никто не ответил - становимся хостом
-                    becomeHost();
-                });
-                
-                // Таймаут если нет ответа
-                setTimeout(() => {
-                    if (!isHost && players.size <= 1) {
-                        becomeHost();
-                    }
-                }, 1000);
-            });
-        }
-        
-        function becomeHost() {
-            isHost = true;
-            peer = new Peer(ROOM_ID);
-            
-            peer.on('open', () => {
-                players.set(myId, {
-                    id: myId,
-                    name: myName,
-                    color: selectedColor,
-                    x: 0, y: 0,
-                    lastDir: { x: 0, y: -1 },
-                    r: 18
-                });
-                
-                showGame();
-                updatePlayerCount();
-            });
-            
-            peer.on('connection', (conn) => {
-                connections.set(conn.peer, conn);
-                
-                conn.on('data', (data) => {
-                    handleData(conn.peer, data);
-                });
-                
-                conn.send({
-                    type: 'init',
-                    players: Array.from(players.values()),
-                    obstacles: playerObstacles
+                    document.getElementById('errorMsg').textContent = 'Не удалось подключиться';
                 });
             });
         }
@@ -494,7 +511,9 @@
         
         function broadcast(data) {
             connections.forEach(conn => {
-                conn.send(data);
+                if (conn.open) {
+                    conn.send(data);
+                }
             });
         }
         
