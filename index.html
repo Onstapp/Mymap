@@ -108,15 +108,55 @@
             transform: translateY(5px);
             box-shadow: 0 3px 0 #1a2a1a;
         }
-        #roomLink {
-            text-align: center;
-            margin: 15px 0;
-            font-size: 14px;
-            word-break: break-all;
-            background: #1a2a1a;
+        .room-link-container {
+            margin-top: 20px;
             padding: 15px;
+            background: #1a2a1a;
             border-radius: 30px;
             border: 2px solid #7cb57c;
+        }
+        .room-link-label {
+            text-align: center;
+            color: #a0d0a0;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .room-link-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .room-link-input {
+            flex: 1;
+            padding: 12px;
+            background: #2a3a2a;
+            border: 2px solid #4a7a4a;
+            border-radius: 20px;
+            color: #ffffa0;
+            font-size: 14px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .copy-btn {
+            padding: 12px 20px;
+            background: #4a7a4a;
+            border: none;
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1a2a1a;
+            transition: 0.05s linear;
+        }
+        .copy-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #1a2a1a;
+        }
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
         }
         #errorMsg {
             color: #ff8888;
@@ -362,6 +402,7 @@
             border-radius: 10px;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
 <body>
     <div id="loginScreen">
@@ -375,7 +416,17 @@
             <div class="color-grid" id="colorGrid"></div>
         </div>
         <button id="createRoomBtn">СОЗДАТЬ КОМНАТУ</button>
-        <div id="roomLink" style="display: none;"></div>
+        
+        <!-- Контейнер для ссылки (изначально скрыт) -->
+        <div id="roomLinkContainer" class="room-link-container" style="display: none;">
+            <div class="room-link-label">📱 ОТПРАВЬ ЭТУ ССЫЛКУ ДРУГУ:</div>
+            <div class="room-link-box">
+                <input type="text" id="roomLinkInput" class="room-link-input" readonly>
+                <button class="copy-btn" id="copyLinkBtn">КОПИРОВАТЬ</button>
+            </div>
+            <div id="qrContainer" class="qr-container"></div>
+        </div>
+        
         <div id="errorMsg"></div>
     </div>
 
@@ -438,6 +489,7 @@
         let myId = 'player_' + Math.random().toString(36).substr(2, 9);
         let myName = '';
         let isHost = false;
+        let currentRoomId = '';
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -519,7 +571,12 @@
         const codeInput = document.getElementById('codeInput');
         const submitCode = document.getElementById('submitCode');
         const cancelCode = document.getElementById('cancelCode');
-        const roomLink = document.getElementById('roomLink');
+        
+        // Элементы для ссылки
+        const roomLinkContainer = document.getElementById('roomLinkContainer');
+        const roomLinkInput = document.getElementById('roomLinkInput');
+        const copyLinkBtn = document.getElementById('copyLinkBtn');
+        const qrContainer = document.getElementById('qrContainer');
         
         // Проверяем URL на параметр join
         const urlParams = new URLSearchParams(window.location.search);
@@ -542,13 +599,30 @@
             myName = name;
             isHost = true;
             
-            // Генерируем ID комнаты
-            const roomId = Math.random().toString(36).substr(2, 8);
+            // Генерируем ID комнаты (6 цифр для простоты)
+            currentRoomId = Math.floor(100000 + Math.random() * 900000).toString();
             
             // Создаем ссылку-приглашение
-            const link = `${window.location.origin}${window.location.pathname}?join=${roomId}`;
-            roomLink.style.display = 'block';
-            roomLink.innerHTML = `🔗 Ссылка для друга:<br><a href="${link}" target="_blank" style="color:#a0d0a0">${link}</a><br><br>📱 Отправь эту ссылку другу`;
+            const link = `${window.location.origin}${window.location.pathname}?join=${currentRoomId}`;
+            
+            // Показываем контейнер со ссылкой
+            roomLinkContainer.style.display = 'block';
+            roomLinkInput.value = link;
+            
+            // Генерируем QR код
+            QRCode.toCanvas(document.createElement('canvas'), link, {
+                width: 200,
+                margin: 1,
+                color: {
+                    dark: '#2a3a2a',
+                    light: '#7cb57c'
+                }
+            }, (err, qrCanvas) => {
+                if (!err) {
+                    qrContainer.innerHTML = '';
+                    qrContainer.appendChild(qrCanvas);
+                }
+            });
             
             // Добавляем себя
             players.set(myId, {
@@ -561,9 +635,19 @@
             });
             
             // Сохраняем в localStorage
-            saveGameData(roomId);
+            saveGameData();
             
             showGame();
+        };
+        
+        // Копирование ссылки
+        copyLinkBtn.onclick = () => {
+            roomLinkInput.select();
+            document.execCommand('copy');
+            copyLinkBtn.textContent = 'СКОПИРОВАНО!';
+            setTimeout(() => {
+                copyLinkBtn.textContent = 'КОПИРОВАТЬ';
+            }, 2000);
         };
         
         // Функция присоединения
@@ -573,9 +657,10 @@
             if (!validateName(name)) return;
             
             myName = name;
+            currentRoomId = roomId;
             
             // Загружаем данные комнаты
-            loadGameData(roomId);
+            loadGameData();
             
             // Добавляем себя
             players.set(myId, {
@@ -590,17 +675,17 @@
             showGame();
         }
         
-        function saveGameData(roomId) {
+        function saveGameData() {
             const data = {
                 players: Array.from(players.values()),
                 obstacles: playerObstacles,
                 host: myId
             };
-            localStorage.setItem('mymap_' + roomId, JSON.stringify(data));
+            localStorage.setItem('mymap_' + currentRoomId, JSON.stringify(data));
         }
         
-        function loadGameData(roomId) {
-            const saved = localStorage.getItem('mymap_' + roomId);
+        function loadGameData() {
+            const saved = localStorage.getItem('mymap_' + currentRoomId);
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
@@ -632,7 +717,8 @@
             
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'block';
-            roomLink.style.display = 'none';
+            roomLinkContainer.style.display = 'none';
+            qrContainer.innerHTML = '';
             
             player.x = 0;
             player.y = 0;
