@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mymap · мультиплеер онлайн</title>
+    <title>Mymap · локальный мультиплеер</title>
     <style>
         * {
             margin: 0;
@@ -108,9 +108,9 @@
             transform: translateY(4px);
             box-shadow: 0 2px 0 #1a2a1a;
         }
-        #roomIdDisplay {
+        #roomCode {
             text-align: center;
-            margin: 5px 0 15px 0;
+            margin: 15px 0;
             font-size: 32px;
             font-weight: bold;
             color: #ffffa0;
@@ -120,22 +120,10 @@
             border: 3px solid #7cb57c;
             letter-spacing: 5px;
         }
-        #joinIdInput {
-            width: 100%;
-            padding: 15px;
-            background: #1a2a1a;
-            border: 3px solid #4a7a4a;
-            border-radius: 30px;
-            color: #d0e0d0;
-            font-size: 24px;
-            font-family: monospace;
-            outline: none;
-            text-align: center;
-            letter-spacing: 5px;
-            margin-bottom: 10px;
-        }
-        #joinIdInput:focus {
-            border-color: #7cb57c;
+        #qrContainer {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
         }
         #errorMsg {
             color: #ff8888;
@@ -157,7 +145,7 @@
             gap: 5px;
             margin-bottom: 12px;
         }
-        .room-id-header {
+        .room-code-header {
             font-size: 24px;
             font-weight: bold;
             color: #ffffa0;
@@ -404,7 +392,8 @@
             to { transform: rotate(360deg); }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
 <body>
     <div id="loginScreen">
@@ -418,18 +407,15 @@
             <div class="color-grid" id="colorGrid"></div>
         </div>
         <button id="createRoomBtn">СОЗДАТЬ КОМНАТУ</button>
-        <button id="showJoinBtn">ПРИСОЕДИНИТЬСЯ</button>
-        <div id="roomIdDisplay" style="display: none;"></div>
-        <div id="joinPanel" style="display: none; margin-top: 15px;">
-            <input type="text" id="joinIdInput" maxlength="6" placeholder="000000">
-            <button id="joinBtn" style="width:100%; padding:15px; background:#4a7a4a; border:none; border-radius:40px; color:#d0e0d0; font-size:20px; font-weight:bold; cursor:pointer; box-shadow:0 6px 0 #1a2a1a;">ПОДКЛЮЧИТЬСЯ</button>
-        </div>
+        <button id="joinRoomBtn">ПРИСОЕДИНИТЬСЯ</button>
+        <div id="roomCode" style="display: none;"></div>
+        <div id="qrContainer" style="display: none;"></div>
         <div id="errorMsg"></div>
     </div>
 
     <div class="game" id="gameScreen" style="display: none;">
         <div class="game-header">
-            <div class="room-id-header" id="inGameRoomId" style="display: none;"></div>
+            <div class="room-code-header" id="inGameRoomCode" style="display: none;"></div>
             <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
             <div class="header-buttons">
                 <button class="reset-btn" id="resetBtn">СБРОС</button>
@@ -501,21 +487,16 @@
             colorGrid.appendChild(div);
         });
         
-        // Простые настройки PeerJS
-        const peerOptions = {
-            host: '0.peerjs.com',
-            port: 443,
-            path: '/',
-            secure: true,
-            debug: 2
-        };
+        // Используем бесплатный публичный сервер Socket.io
+        const socket = io('https://server-p2p.herokuapp.com/', {
+            transports: ['websocket'],
+            reconnectionAttempts: 3
+        });
         
-        let peer = null;
-        let conn = null;
+        let roomId = '';
         let players = new Map();
         let playerObstacles = [];
         let isHost = false;
-        let roomId = '';
         
         const MAX_PLAYER_OBSTACLES = 10;
         const RESET_CODE = '6787001';
@@ -580,18 +561,9 @@
         const codeInput = document.getElementById('codeInput');
         const submitCode = document.getElementById('submitCode');
         const cancelCode = document.getElementById('cancelCode');
-        const roomIdDisplay = document.getElementById('roomIdDisplay');
-        const inGameRoomId = document.getElementById('inGameRoomId');
-        const joinPanel = document.getElementById('joinPanel');
-        const joinIdInput = document.getElementById('joinIdInput');
-        const joinBtn = document.getElementById('joinBtn');
-        const showJoinBtn = document.getElementById('showJoinBtn');
-        
-        // Показать панель присоединения
-        showJoinBtn.onclick = () => {
-            joinPanel.style.display = 'block';
-            joinIdInput.focus();
-        };
+        const roomCode = document.getElementById('roomCode');
+        const inGameRoomCode = document.getElementById('inGameRoomCode');
+        const qrContainer = document.getElementById('qrContainer');
         
         // Создание комнаты
         document.getElementById('createRoomBtn').onclick = () => {
@@ -604,142 +576,122 @@
             document.getElementById('createRoomBtn').innerHTML = 'СОЗДАНИЕ <span class="loading"></span>';
             document.getElementById('createRoomBtn').disabled = true;
             
-            // Генерируем короткий цифровой ID
-            const shortId = Math.floor(100000 + Math.random() * 900000).toString();
+            // Генерируем код комнаты
+            roomId = Math.floor(100000 + Math.random() * 900000).toString();
             
-            peer = new Peer(shortId, peerOptions);
-            
-            peer.on('open', (id) => {
-                roomId = id;
-                isHost = true;
-                
-                roomIdDisplay.style.display = 'block';
-                roomIdDisplay.textContent = id;
-                
-                players.set(myId, {
-                    id: myId,
-                    name: myName,
-                    color: selectedColor,
-                    x: 0, y: 0,
-                    lastDir: { x: 0, y: -1 },
-                    r: 18
-                });
-                
-                showGame();
-                
-                peer.on('connection', (connection) => {
-                    conn = connection;
-                    
-                    conn.on('data', (data) => {
-                        handleData(data);
-                    });
-                    
-                    conn.on('close', () => {
-                        connectionStatus.textContent = 'Игрок отключился';
-                    });
-                    
-                    conn.send({
-                        type: 'init',
-                        players: Array.from(players.values()),
-                        obstacles: playerObstacles
-                    });
-                });
-            });
-            
-            peer.on('error', (err) => {
-                console.log('Peer error:', err);
-                if (err.type === 'unavailable-id') {
-                    // ID занят, пробуем другой
-                    document.getElementById('createRoomBtn').click();
-                } else {
-                    document.getElementById('errorMsg').textContent = 'Ошибка подключения к серверу';
-                    document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
-                    document.getElementById('createRoomBtn').disabled = false;
-                }
-            });
+            socket.emit('createRoom', { roomId, player: {
+                id: myId,
+                name: myName,
+                color: selectedColor,
+                x: 0, y: 0,
+                lastDir: { x: 0, y: -1 },
+                r: 18
+            }});
         };
         
         // Присоединение к комнате
-        joinBtn.onclick = () => {
+        document.getElementById('joinRoomBtn').onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
-            const id = joinIdInput.value.trim();
+            const id = prompt('Введите 6-значный код комнаты:');
             
             if (!id || id.length !== 6 || !/^\d+$/.test(id)) {
-                document.getElementById('errorMsg').textContent = 'Введите 6-значный цифровой ID';
+                document.getElementById('errorMsg').textContent = 'Введите 6-значный код';
                 return;
             }
             
             if (!validateName(name)) return;
             
             myName = name;
+            roomId = id;
             
-            joinBtn.innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
-            joinBtn.disabled = true;
+            document.getElementById('joinRoomBtn').innerHTML = 'ПОДКЛЮЧЕНИЕ <span class="loading"></span>';
+            document.getElementById('joinRoomBtn').disabled = true;
             
-            peer = new Peer(peerOptions);
-            
-            peer.on('open', () => {
-                conn = peer.connect(id);
-                
-                // Таймаут подключения
-                const timeout = setTimeout(() => {
-                    if (!conn.open) {
-                        document.getElementById('errorMsg').textContent = 'Таймаут подключения';
-                        joinBtn.innerHTML = 'ПОДКЛЮЧИТЬСЯ';
-                        joinBtn.disabled = false;
-                        peer.destroy();
-                    }
-                }, 10000);
-                
-                conn.on('open', () => {
-                    clearTimeout(timeout);
-                    isHost = false;
-                    
-                    conn.on('data', (data) => {
-                        handleData(data);
-                    });
-                    
-                    conn.on('close', () => {
-                        connectionStatus.textContent = 'Соединение потеряно';
-                    });
-                    
-                    conn.send({
-                        type: 'join',
-                        player: {
-                            id: myId,
-                            name: myName,
-                            color: selectedColor,
-                            x: 0, y: 0,
-                            lastDir: { x: 0, y: -1 },
-                            r: 18
-                        }
-                    });
-                    
-                    players.set(myId, {
-                        id: myId,
-                        name: myName,
-                        color: selectedColor,
-                        x: 0, y: 0,
-                        lastDir: { x: 0, y: -1 },
-                        r: 18
-                    });
-                });
-                
-                conn.on('error', () => {
-                    clearTimeout(timeout);
-                    document.getElementById('errorMsg').textContent = 'Не удалось подключиться';
-                    joinBtn.innerHTML = 'ПОДКЛЮЧИТЬСЯ';
-                    joinBtn.disabled = false;
-                });
-            });
-            
-            peer.on('error', (err) => {
-                console.log('Peer error:', err);
-                document.getElementById('errorMsg').textContent = 'Ошибка подключения';
-                joinBtn.innerHTML = 'ПОДКЛЮЧИТЬСЯ';
-                joinBtn.disabled = false;
-            });
+            socket.emit('joinRoom', { roomId, player: {
+                id: myId,
+                name: myName,
+                color: selectedColor,
+                x: 0, y: 0,
+                lastDir: { x: 0, y: -1 },
+                r: 18
+            }});
         };
+        
+        // Socket события
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+        
+        socket.on('roomCreated', (data) => {
+            isHost = true;
+            roomId = data.roomId;
+            
+            roomCode.style.display = 'block';
+            roomCode.textContent = roomId;
+            
+            // Генерируем QR код
+            QRCode.toCanvas(document.createElement('canvas'), window.location.href + '?join=' + roomId, {
+                width: 200,
+                margin: 1
+            }, (err, qrCanvas) => {
+                if (!err) {
+                    qrContainer.innerHTML = '';
+                    qrContainer.appendChild(qrCanvas);
+                    qrContainer.style.display = 'flex';
+                }
+            });
+            
+            players.set(myId, data.players[0]);
+            showGame();
+        });
+        
+        socket.on('roomJoined', (data) => {
+            isHost = false;
+            data.players.forEach(p => players.set(p.id, p));
+            playerObstacles = data.obstacles || [];
+            showGame();
+        });
+        
+        socket.on('playerJoined', (playerData) => {
+            players.set(playerData.id, playerData);
+            updatePlayerList();
+        });
+        
+        socket.on('playerMoved', (data) => {
+            const p = players.get(data.id);
+            if (p) {
+                p.x = data.x;
+                p.y = data.y;
+                p.lastDir = data.lastDir;
+            }
+        });
+        
+        socket.on('playerLeft', (id) => {
+            players.delete(id);
+            updatePlayerList();
+        });
+        
+        socket.on('obstacleCreated', (obstacle) => {
+            playerObstacles.push(obstacle);
+            updateCounter();
+        });
+        
+        socket.on('obstacleDeleted', (index) => {
+            playerObstacles.splice(index, 1);
+            updateCounter();
+        });
+        
+        socket.on('roomReset', () => {
+            resetGame();
+        });
+        
+        socket.on('error', (msg) => {
+            document.getElementById('errorMsg').textContent = msg;
+            document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
+            document.getElementById('createRoomBtn').disabled = false;
+            document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
+            document.getElementById('joinRoomBtn').disabled = false;
+        });
         
         function validateName(name) {
             if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
@@ -749,72 +701,13 @@
             return true;
         }
         
-        function handleData(data) {
-            switch(data.type) {
-                case 'init':
-                    players.clear();
-                    data.players.forEach(p => players.set(p.id, p));
-                    playerObstacles = data.obstacles || [];
-                    updatePlayerList();
-                    updateCounter();
-                    break;
-                    
-                case 'join':
-                    players.set(data.player.id, data.player);
-                    if (isHost && conn) {
-                        conn.send({
-                            type: 'playerJoined',
-                            player: data.player
-                        });
-                    }
-                    updatePlayerList();
-                    break;
-                    
-                case 'playerJoined':
-                    players.set(data.player.id, data.player);
-                    updatePlayerList();
-                    break;
-                    
-                case 'move':
-                    const p = players.get(data.id);
-                    if (p) {
-                        p.x = data.x;
-                        p.y = data.y;
-                        p.lastDir = data.lastDir;
-                    }
-                    break;
-                    
-                case 'createObstacle':
-                    playerObstacles.push(data.obstacle);
-                    updateCounter();
-                    break;
-                    
-                case 'deleteObstacle':
-                    playerObstacles.splice(data.index, 1);
-                    updateCounter();
-                    break;
-                    
-                case 'reset':
-                    if (data.code === RESET_CODE) {
-                        resetGame();
-                    }
-                    break;
-            }
-        }
-        
-        function broadcast(data) {
-            if (conn && conn.open) {
-                conn.send(data);
-            }
-        }
-        
         function showGame() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
             
             if (isHost) {
-                inGameRoomId.style.display = 'block';
-                inGameRoomId.textContent = roomId;
+                inGameRoomCode.style.display = 'block';
+                inGameRoomCode.textContent = roomId;
             }
             
             connectionStatus.textContent = `🟢 Подключено`;
@@ -823,48 +716,28 @@
             
             document.getElementById('createRoomBtn').innerHTML = 'СОЗДАТЬ КОМНАТУ';
             document.getElementById('createRoomBtn').disabled = false;
-            joinBtn.innerHTML = 'ПОДКЛЮЧИТЬСЯ';
-            joinBtn.disabled = false;
-            joinPanel.style.display = 'none';
+            document.getElementById('joinRoomBtn').innerHTML = 'ПРИСОЕДИНИТЬСЯ';
+            document.getElementById('joinRoomBtn').disabled = false;
         }
         
         function resetGame() {
             playerObstacles = [];
             players.clear();
             
-            if (isHost && peer) {
-                players.set(myId, {
-                    id: myId,
-                    name: myName,
-                    color: selectedColor,
-                    x: 0, y: 0,
-                    lastDir: { x: 0, y: -1 },
-                    r: 18
-                });
-            }
-            
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'block';
-            roomIdDisplay.style.display = 'none';
-            inGameRoomId.style.display = 'none';
-            joinPanel.style.display = 'none';
+            roomCode.style.display = 'none';
+            qrContainer.style.display = 'none';
+            inGameRoomCode.style.display = 'none';
             
             player.x = 0;
             player.y = 0;
             lastDir = { x: 0, y: -1 };
             document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
-            
-            if (peer) {
-                peer.destroy();
-                peer = null;
-            }
-            conn = null;
         }
         
         exitBtn.onclick = () => {
-            if (conn) {
-                conn.close();
-            }
+            socket.emit('leaveRoom', { roomId, playerId: myId });
             resetGame();
         };
         
@@ -878,9 +751,7 @@
             const code = codeInput.value.trim();
             if (code === RESET_CODE) {
                 if (isHost) {
-                    if (conn) {
-                        broadcast({ type: 'reset', code: RESET_CODE });
-                    }
+                    socket.emit('resetRoom', { roomId });
                     resetGame();
                 } else {
                     alert('Только хост может сбросить игру!');
@@ -940,42 +811,36 @@
                 player.x += dx;
                 player.y += dy;
                 
-                if (conn && conn.open) {
-                    broadcast({
-                        type: 'move',
-                        id: myId,
-                        x: player.x,
-                        y: player.y,
-                        lastDir: lastDir
-                    });
-                }
+                socket.emit('move', {
+                    roomId,
+                    id: myId,
+                    x: player.x,
+                    y: player.y,
+                    lastDir
+                });
                 return;
             }
             
             if (canMoveTo(player.x + dx, player.y, player.r)) {
                 player.x += dx;
-                if (conn && conn.open) {
-                    broadcast({
-                        type: 'move',
-                        id: myId,
-                        x: player.x,
-                        y: player.y,
-                        lastDir: lastDir
-                    });
-                }
+                socket.emit('move', {
+                    roomId,
+                    id: myId,
+                    x: player.x,
+                    y: player.y,
+                    lastDir
+                });
             }
             
             if (canMoveTo(player.x, player.y + dy, player.r)) {
                 player.y += dy;
-                if (conn && conn.open) {
-                    broadcast({
-                        type: 'move',
-                        id: myId,
-                        x: player.x,
-                        y: player.y,
-                        lastDir: lastDir
-                    });
-                }
+                socket.emit('move', {
+                    roomId,
+                    id: myId,
+                    x: player.x,
+                    y: player.y,
+                    lastDir
+                });
             }
         }
         
@@ -1020,9 +885,7 @@
             };
             
             playerObstacles.push(obstacle);
-            if (conn && conn.open) {
-                broadcast({ type: 'createObstacle', obstacle });
-            }
+            socket.emit('createObstacle', { roomId, obstacle });
             updateCounter();
         }
         
@@ -1043,9 +906,7 @@
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
                         playerObstacles.splice(i, 1);
-                        if (conn && conn.open) {
-                            broadcast({ type: 'deleteObstacle', index: i });
-                        }
+                        socket.emit('deleteObstacle', { roomId, index: i });
                         updateCounter();
                     }
                     return;
