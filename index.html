@@ -110,7 +110,7 @@
         }
         #roomIdDisplay {
             text-align: center;
-            margin: 15px 0;
+            margin: 5px 0 15px 0;  /* Уменьшен верхний отступ, чтобы поднять выше */
             font-size: 24px;
             color: #ffffa0;
             background: #1a2a1a;
@@ -135,13 +135,23 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 5px;  /* Уменьшен отступ */
             margin-bottom: 12px;
+        }
+        .room-id-header {
+            font-size: 18px;
+            color: #ffffa0;
+            background: #1a2a1a;
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: 1px solid #5a7a5a;
+            margin-bottom: 5px;
         }
         .header-buttons {
             display: flex;
             gap: 15px;
             justify-content: center;
+            margin-top: 5px;
         }
         .exit-btn, .reset-btn {
             background: #4a3a3a;
@@ -395,6 +405,7 @@
 
     <div class="game" id="gameScreen" style="display: none;">
         <div class="game-header">
+            <div class="room-id-header" id="inGameRoomId" style="display: none;"></div>
             <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
             <div class="header-buttons">
                 <button class="reset-btn" id="resetBtn">СБРОС</button>
@@ -562,6 +573,7 @@
         const submitCode = document.getElementById('submitCode');
         const cancelCode = document.getElementById('cancelCode');
         const roomIdDisplay = document.getElementById('roomIdDisplay');
+        const inGameRoomId = document.getElementById('inGameRoomId');
         
         // Создание комнаты
         document.getElementById('createRoomBtn').onclick = () => {
@@ -771,6 +783,13 @@
         function showGame() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
+            
+            // Показываем ID комнаты в игре над координатами
+            if (isHost) {
+                inGameRoomId.style.display = 'block';
+                inGameRoomId.textContent = `🏠 КОМНАТА: ${roomId}`;
+            }
+            
             connectionStatus.textContent = `🟢 Подключено: ${roomId}`;
             updatePlayerList();
             updateCounter();
@@ -799,6 +818,7 @@
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'block';
             roomIdDisplay.style.display = 'none';
+            inGameRoomId.style.display = 'none';
             
             player.x = 0;
             player.y = 0;
