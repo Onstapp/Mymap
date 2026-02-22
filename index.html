@@ -128,7 +128,12 @@
             gap: 10px;
             margin-bottom: 12px;
         }
-        .exit-btn {
+        .header-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .exit-btn, .reset-btn {
             background: #4a3a3a;
             color: #ffb0b0;
             border: none;
@@ -142,7 +147,12 @@
             font-family: monospace;
             width: fit-content;
         }
-        .exit-btn:active {
+        .reset-btn {
+            background: #3a4a3a;
+            color: #b0ffb0;
+            box-shadow: 0 4px 0 #1a2a1a;
+        }
+        .exit-btn:active, .reset-btn:active {
             transform: translateY(3px);
             box-shadow: 0 1px 0 #2a1a1a;
         }
@@ -254,6 +264,82 @@
         .game-wrapper {
             position: relative;
         }
+        .code-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #00000080;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        .code-dialog.hidden {
+            display: none;
+        }
+        .code-box {
+            background: #2a3a2a;
+            padding: 30px;
+            border-radius: 40px;
+            box-shadow: 0 20px 30px #000000;
+            border: 3px solid #5a7a5a;
+            width: min(300px, 80vw);
+        }
+        .code-box h3 {
+            color: #d0e0d0;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .code-box input {
+            width: 100%;
+            padding: 15px;
+            background: #1a2a1a;
+            border: 3px solid #4a7a4a;
+            border-radius: 30px;
+            color: #d0e0d0;
+            font-size: 24px;
+            font-family: monospace;
+            outline: none;
+            text-align: center;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+        }
+        .code-box input:focus {
+            border-color: #7cb57c;
+        }
+        .code-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .code-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.05s linear;
+            font-family: monospace;
+        }
+        .code-btn.submit {
+            background: #4a7a4a;
+            color: #d0e0d0;
+            box-shadow: 0 5px 0 #1a2a1a;
+        }
+        .code-btn.cancel {
+            background: #4a3a3a;
+            color: #ffb0b0;
+            box-shadow: 0 5px 0 #2a1a1a;
+        }
+        .code-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #1a2a1a;
+        }
     </style>
 </head>
 <body>
@@ -274,7 +360,10 @@
     <div class="game" id="gameScreen" style="display: none;">
         <div class="game-header">
             <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
-            <button class="exit-btn" id="exitBtn">ВЫХОД</button>
+            <div class="header-buttons">
+                <button class="reset-btn" id="resetBtn">СБРОС</button>
+                <button class="exit-btn" id="exitBtn">ВЫХОД</button>
+            </div>
         </div>
         <div class="game-wrapper">
             <div class="info-panel">
@@ -292,6 +381,17 @@
                 <div class="joystick" id="joystick">
                     <div class="thumb" id="thumb"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="code-dialog hidden" id="codeDialog">
+        <div class="code-box">
+            <h3>🔐 ВВЕДИ КОД</h3>
+            <input type="text" id="codeInput" maxlength="7" placeholder="0000000">
+            <div class="code-buttons">
+                <button class="code-btn submit" id="submitCode">OK</button>
+                <button class="code-btn cancel" id="cancelCode">ОТМЕНА</button>
             </div>
         </div>
     </div>
@@ -334,6 +434,7 @@
         let players = new Map();
         let playerObstacles = [];
         const MAX_PLAYER_OBSTACLES = 10;
+        const RESET_CODE = '6787001';
         
         // Загружаем сохраненные данные
         function loadGameData() {
@@ -359,6 +460,28 @@
                 obstacles: playerObstacles
             };
             localStorage.setItem('mymap_game', JSON.stringify(data));
+        }
+        
+        // Сброс игры
+        function resetGame() {
+            // Очищаем все препятствия
+            playerObstacles = [];
+            // Очищаем всех игроков
+            players.clear();
+            // Сохраняем пустые данные
+            saveGameData();
+            
+            // Возвращаем всех на экран входа
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'block';
+            
+            // Очищаем данные игрока
+            player.x = 0;
+            player.y = 0;
+            lastDir = { x: 0, y: -1 };
+            
+            // Генерируем новое случайное имя
+            document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
         }
         
         // Загружаем при старте
@@ -418,6 +541,11 @@
         const counterDiv = document.getElementById('counter');
         const playerListDiv = document.getElementById('playerList');
         const exitBtn = document.getElementById('exitBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const codeDialog = document.getElementById('codeDialog');
+        const codeInput = document.getElementById('codeInput');
+        const submitCode = document.getElementById('submitCode');
+        const cancelCode = document.getElementById('cancelCode');
         
         function startGame() {
             const name = document.getElementById('nameInput').value.trim();
@@ -464,6 +592,37 @@
             player.y = 0;
             lastDir = { x: 0, y: -1 };
         };
+        
+        // Сброс игры (показываем диалог ввода кода)
+        resetBtn.onclick = () => {
+            codeDialog.classList.remove('hidden');
+            codeInput.value = '';
+            codeInput.focus();
+        };
+        
+        // Отправка кода
+        submitCode.onclick = () => {
+            const code = codeInput.value.trim();
+            if (code === RESET_CODE) {
+                resetGame();
+                codeDialog.classList.add('hidden');
+            } else {
+                alert('Неверный код!');
+                codeInput.value = '';
+            }
+        };
+        
+        // Отмена
+        cancelCode.onclick = () => {
+            codeDialog.classList.add('hidden');
+        };
+        
+        // Закрытие по Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !codeDialog.classList.contains('hidden')) {
+                codeDialog.classList.add('hidden');
+            }
+        });
         
         function updatePlayerList() {
             const list = Array.from(players.values())
