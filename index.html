@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mymap · Photon мультиплеер</title>
+    <title>Mymap · Мультиплеер по коду</title>
     <style>
         * {
             margin: 0;
@@ -117,7 +117,7 @@
             border: 3px solid #7cb57c;
         }
         
-        #scanBtn {
+        #joinWithCodeBtn {
             width: 100%;
             padding: 15px;
             background: #4a7a4a;
@@ -131,31 +131,52 @@
             margin-bottom: 15px;
         }
         
-        #roomsList {
-            max-height: 200px;
-            overflow-y: auto;
-            margin-bottom: 15px;
+        #roomCodeInput {
+            width: 100%;
+            padding: 15px;
+            background: #1a2a1a;
+            border: 3px solid #4a7a4a;
+            border-radius: 30px;
+            color: #d0e0d0;
+            font-size: 24px;
+            font-family: monospace;
+            outline: none;
+            text-align: center;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
         }
         
-        .room-item {
+        #activeGamesList {
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 15px;
+            border-top: 2px solid #4a7a4a;
+            padding-top: 10px;
+        }
+        
+        .game-item {
             background: #2a3a2a;
             border: 2px solid #4a7a4a;
             border-radius: 15px;
-            padding: 12px;
+            padding: 10px;
             margin-bottom: 8px;
             cursor: pointer;
             transition: 0.05s linear;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .room-item:active {
+        .game-item:active {
             transform: scale(0.98);
             background: #3a4a3a;
         }
-        .room-name {
-            font-size: 16px;
+        .game-code {
+            font-size: 20px;
             font-weight: bold;
             color: #ffffa0;
+            letter-spacing: 2px;
         }
-        .room-players {
+        .game-host {
             font-size: 14px;
             color: #a0d0a0;
         }
@@ -399,42 +420,47 @@
             padding: 3px 6px;
             border-radius: 8px;
         }
-        .room-info {
-            text-align: center;
-            margin-bottom: 10px;
-            color: #d0e0d0;
-            font-size: 14px;
-        }
-        .photon-loading {
-            text-align: center;
+        .room-code-display {
+            font-size: 24px;
+            font-weight: bold;
             color: #ffffa0;
+            background: #1a2a1a;
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 3px solid #7cb57c;
+            margin: 10px 0;
+            text-align: center;
+            letter-spacing: 5px;
+        }
+        .status-text {
+            text-align: center;
+            color: #a0d0a0;
             margin: 10px 0;
             font-size: 14px;
         }
     </style>
-    <!-- Пробуем несколько CDN для Photon -->
-    <script src="https://cdn.jsdelivr.net/npm/photon@2.0.0/dist/photon.min.js"></script>
 </head>
 <body>
     <div id="loginScreen">
         <h2>MYMAP</h2>
         <div class="input-group">
-            <label>ТВОЁ ИМЯ (3-20 символов, a-z, 0-9, _)</label>
-            <input type="text" id="nameInput" maxlength="20">
+            <label>ТВОЁ ИМЯ (3-20 символов)</label>
+            <input type="text" id="nameInput" maxlength="20" placeholder="Игрок">
         </div>
         <div class="input-group">
             <label>ЦВЕТ</label>
             <div class="color-grid" id="colorGrid"></div>
         </div>
-        <div class="photon-loading" id="photonStatus">🟡 Загрузка Photon...</div>
-        <button id="createRoomBtn">СОЗДАТЬ ИГРУ</button>
+        
+        <button id="createRoomBtn">СОЗДАТЬ НОВУЮ ИГРУ</button>
         
         <div id="joinPanel">
-            <button id="scanBtn">НАЙТИ ИГРЫ</button>
-            <div id="roomsList"></div>
-            <div style="text-align: center; color: #a0d0a0; font-size: 12px;">
-                Локальный мультиплеер (WebRTC)
-            </div>
+            <div style="text-align: center; margin-bottom: 10px; color: #ffffa0;">🔑 ВОЙТИ ПО КОДУ</div>
+            <input type="text" id="roomCodeInput" maxlength="6" placeholder="000000">
+            <button id="joinWithCodeBtn">ПОДКЛЮЧИТЬСЯ</button>
+            
+            <div id="activeGamesList"></div>
+            <div class="status-text" id="networkStatus">🟢 Локальный мультиплеер активен</div>
         </div>
         
         <div id="errorMsg"></div>
@@ -443,7 +469,7 @@
     <div class="game" id="gameScreen" style="display: none;">
         <div class="game-header">
             <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
-            <div class="room-info" id="roomInfo"></div>
+            <div class="room-code-display" id="roomCodeDisplay">000000</div>
             <div class="header-buttons">
                 <button class="reset-btn" id="resetBtn">СБРОС</button>
                 <button class="exit-btn" id="exitBtn">ВЫХОД</button>
@@ -455,7 +481,7 @@
                 <div class="counter" id="counter">0/10</div>
             </div>
             <canvas id="world" width="600" height="600"></canvas>
-            <div class="connection-status" id="connectionStatus">🟡 Подключение...</div>
+            <div class="connection-status" id="connectionStatus">🟢 В комнате</div>
         </div>
         <div class="controls">
             <div class="action-buttons">
@@ -472,7 +498,7 @@
 
     <div class="code-dialog hidden" id="codeDialog">
         <div class="code-box">
-            <h3>🔐 ВВЕДИ КОД</h3>
+            <h3>🔐 ВВЕДИ КОД СБРОСА</h3>
             <input type="text" id="codeInput" maxlength="7" placeholder="0000000">
             <div class="code-buttons">
                 <button class="code-btn submit" id="submitCode">OK</button>
@@ -482,14 +508,19 @@
     </div>
 
     <script>
-        // Генерируем случайное число от 001 до 999
-        function getRandomPlayerNumber() {
-            const num = Math.floor(Math.random() * 999) + 1;
-            return num.toString().padStart(3, '0');
+        // Генерируем случайное имя
+        function getRandomPlayerName() {
+            const names = ['Воин', 'Маг', 'Лучник', 'Рыцарь', 'Разбойник', 'Паладин', 'Друид', 'Шаман'];
+            return names[Math.floor(Math.random() * names.length)] + '_' + Math.floor(Math.random() * 1000);
+        }
+        
+        // Генерируем код комнаты
+        function generateRoomCode() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
         }
         
         // Устанавливаем имя по умолчанию
-        document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
+        document.getElementById('nameInput').value = getRandomPlayerName();
         
         // Цвета
         const colors = [
@@ -502,20 +533,14 @@
         let myName = '';
         let players = new Map();
         let playerObstacles = [];
+        let currentRoomCode = null;
+        let isHost = false;
         
-        // Photon настройки
-        const photonAppId = '69a76040-59ee-46c4-8f15-235ced9d9b6d';
-        let photon = null;
-        let currentRoom = null;
-        let isPhotonConnected = false;
-        let photonInitialized = false;
-        let useLocalMultiplayer = false;
-        
-        // WebRTC (запасной вариант)
+        // WebRTC настройки
         let peerConnection = null;
         let dataChannel = null;
-        let isHost = false;
-        let discoveredHosts = new Map();
+        let pendingCandidates = [];
+        let activeRooms = new Map(); // Активные комнаты в сети
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -594,59 +619,162 @@
         const codeInput = document.getElementById('codeInput');
         const submitCode = document.getElementById('submitCode');
         const cancelCode = document.getElementById('cancelCode');
-        const roomsList = document.getElementById('roomsList');
-        const scanBtn = document.getElementById('scanBtn');
-        const roomInfo = document.getElementById('roomInfo');
+        const activeGamesList = document.getElementById('activeGamesList');
+        const roomCodeInput = document.getElementById('roomCodeInput');
+        const joinWithCodeBtn = document.getElementById('joinWithCodeBtn');
+        const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+        const networkStatus = document.getElementById('networkStatus');
         const createRoomBtn = document.getElementById('createRoomBtn');
-        const photonStatus = document.getElementById('photonStatus');
         
-        // ============== ЛОКАЛЬНЫЙ МУЛЬТИПЛЕЕР (WebRTC) ==============
-        function initLocalMultiplayer() {
-            photonStatus.textContent = '🟢 Используем локальный мультиплеер';
-            document.querySelector('#joinPanel div:last-child').innerHTML = 'Локальный мультиплеер (Wi-Fi)';
-            
-            // Меняем текст кнопок
-            createRoomBtn.textContent = 'СОЗДАТЬ ИГРУ (ЛОКАЛЬНО)';
-            scanBtn.textContent = 'НАЙТИ ИГРЫ В СЕТИ';
-            
-            // Переопределяем функции
-            createRoomBtn.onclick = createLocalRoom;
-            scanBtn.onclick = scanLocalHosts;
+        // ============== СИГНАЛЬНЫЙ СЕРВЕР (localStorage) ==============
+        // Используем localStorage как простой сигнальный сервер
+        
+        // Обновление списка активных комнат
+        function updateActiveRoomsList() {
+            try {
+                const rooms = JSON.parse(localStorage.getItem('active_rooms') || '{}');
+                activeGamesList.innerHTML = '';
+                
+                // Очищаем старые комнаты (старше 30 секунд)
+                const now = Date.now();
+                for (let code in rooms) {
+                    if (now - rooms[code].timestamp > 30000) {
+                        delete rooms[code];
+                    }
+                }
+                localStorage.setItem('active_rooms', JSON.stringify(rooms));
+                
+                if (Object.keys(rooms).length === 0) {
+                    activeGamesList.innerHTML = '<div style="text-align:center; padding:10px; color:#888;">❌ Нет активных игр</div>';
+                    return;
+                }
+                
+                Object.entries(rooms).forEach(([code, room]) => {
+                    const gameItem = document.createElement('div');
+                    gameItem.className = 'game-item';
+                    gameItem.onclick = () => joinRoomByCode(code);
+                    gameItem.innerHTML = `
+                        <span class="game-code">${code}</span>
+                        <span class="game-host">${room.hostName}</span>
+                    `;
+                    activeGamesList.appendChild(gameItem);
+                });
+            } catch (e) {
+                console.error('Error updating rooms list:', e);
+            }
         }
         
-        function createLocalRoom() {
+        // Регистрация комнаты
+        function registerRoom(code, hostName) {
+            try {
+                const rooms = JSON.parse(localStorage.getItem('active_rooms') || '{}');
+                rooms[code] = {
+                    hostName: hostName,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('active_rooms', JSON.stringify(rooms));
+                updateActiveRoomsList();
+            } catch (e) {
+                console.error('Error registering room:', e);
+            }
+        }
+        
+        // Удаление комнаты
+        function unregisterRoom(code) {
+            try {
+                const rooms = JSON.parse(localStorage.getItem('active_rooms') || '{}');
+                delete rooms[code];
+                localStorage.setItem('active_rooms', JSON.stringify(rooms));
+                updateActiveRoomsList();
+            } catch (e) {
+                console.error('Error unregistering room:', e);
+            }
+        }
+        
+        // Сохранение offer
+        function saveOffer(code, offer) {
+            localStorage.setItem(`offer_${code}`, JSON.stringify({
+                offer: offer,
+                timestamp: Date.now()
+            }));
+        }
+        
+        // Получение offer
+        function getOffer(code) {
+            const data = localStorage.getItem(`offer_${code}`);
+            return data ? JSON.parse(data).offer : null;
+        }
+        
+        // Сохранение answer
+        function saveAnswer(code, answer) {
+            localStorage.setItem(`answer_${code}`, JSON.stringify({
+                answer: answer,
+                timestamp: Date.now()
+            }));
+        }
+        
+        // Получение answer
+        function getAnswer(code) {
+            const data = localStorage.getItem(`answer_${code}`);
+            return data ? JSON.parse(data).answer : null;
+        }
+        
+        // Сохранение ICE candidate
+        function saveCandidate(code, candidate, isHost) {
+            const key = isHost ? `candidates_host_${code}` : `candidates_client_${code}`;
+            const candidates = JSON.parse(localStorage.getItem(key) || '[]');
+            candidates.push({
+                candidate: candidate,
+                timestamp: Date.now()
+            });
+            localStorage.setItem(key, JSON.stringify(candidates));
+        }
+        
+        // Получение ICE candidates
+        function getCandidates(code, isHost) {
+            const key = isHost ? `candidates_client_${code}` : `candidates_host_${code}`;
+            const candidates = JSON.parse(localStorage.getItem(key) || '[]');
+            localStorage.removeItem(key);
+            return candidates.map(c => c.candidate);
+        }
+        
+        // Очистка данных комнаты
+        function cleanupRoom(code) {
+            localStorage.removeItem(`offer_${code}`);
+            localStorage.removeItem(`answer_${code}`);
+            localStorage.removeItem(`candidates_host_${code}`);
+            localStorage.removeItem(`candidates_client_${code}`);
+        }
+        
+        // ============== СОЗДАНИЕ КОМНАТЫ ==============
+        createRoomBtn.onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
             
             myName = name;
-            isHost = true;
             myId = 'host_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            isHost = true;
+            
+            // Генерируем код комнаты
+            currentRoomCode = generateRoomCode();
+            roomCodeDisplay.textContent = currentRoomCode;
+            
+            // Регистрируем комнату
+            registerRoom(currentRoomCode, myName);
             
             // Создаем peer connection
-            const configuration = {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            };
-            
-            peerConnection = new RTCPeerConnection(configuration);
+            createPeerConnection();
             
             // Создаем data channel
             dataChannel = peerConnection.createDataChannel('game');
-            setupLocalDataChannel();
+            setupDataChannel();
             
             // Создаем offer
             peerConnection.createOffer()
                 .then(offer => peerConnection.setLocalDescription(offer))
                 .then(() => {
-                    // Сохраняем offer в localStorage для "обнаружения"
-                    localStorage.setItem('mymap_host', JSON.stringify({
-                        id: myId,
-                        name: myName,
-                        color: selectedColor,
-                        offer: peerConnection.localDescription
-                    }));
+                    // Сохраняем offer
+                    saveOffer(currentRoomCode, peerConnection.localDescription);
                     
                     // Добавляем себя в список игроков
                     players.set(myId, {
@@ -655,104 +783,133 @@
                         color: selectedColor,
                         x: 0, y: 0,
                         lastDir: { x: 0, y: -1 },
-                        r: 18
+                        r: 18,
+                        isHost: true
                     });
                     
                     showGame();
                     connectionStatus.textContent = '🟢 Хост (ожидание игроков)';
+                    
+                    // Периодически обновляем регистрацию
+                    startHeartbeat();
+                })
+                .catch(error => {
+                    console.error('Error creating offer:', error);
+                    document.getElementById('errorMsg').textContent = 'Ошибка создания комнаты';
                 });
-        }
+        };
         
-        function scanLocalHosts() {
-            discoveredHosts.clear();
-            roomsList.innerHTML = '<div style="text-align:center; padding:10px;">🔍 Поиск хостов...</div>';
-            
-            // Ищем в localStorage (для демо)
-            const hostData = localStorage.getItem('mymap_host');
-            if (hostData) {
-                try {
-                    const host = JSON.parse(hostData);
-                    discoveredHosts.set(host.id, host);
-                } catch (e) {}
-            }
-            
-            setTimeout(() => {
-                updateLocalHostsList();
-            }, 1000);
-        }
-        
-        function updateLocalHostsList() {
-            if (discoveredHosts.size === 0) {
-                roomsList.innerHTML = '<div style="text-align:center; padding:10px; color:#888;">❌ Хостов не найдено</div>';
+        // ============== ПОДКЛЮЧЕНИЕ ПО КОДУ ==============
+        joinWithCodeBtn.onclick = () => {
+            const code = roomCodeInput.value.trim();
+            if (code.length !== 6) {
+                document.getElementById('errorMsg').textContent = 'Введите 6-значный код';
                 return;
             }
-            
-            roomsList.innerHTML = '';
-            discoveredHosts.forEach((host, id) => {
-                const hostDiv = document.createElement('div');
-                hostDiv.className = 'room-item';
-                hostDiv.onclick = () => connectToLocalHost(id);
-                hostDiv.innerHTML = `
-                    <div class="room-name">${host.name}</div>
-                    <div class="room-players">🟢 Активен</div>
-                `;
-                roomsList.appendChild(hostDiv);
-            });
-        }
+            joinRoomByCode(code);
+        };
         
-        function connectToLocalHost(hostId) {
+        function joinRoomByCode(code) {
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
             
+            // Проверяем, существует ли комната
+            const rooms = JSON.parse(localStorage.getItem('active_rooms') || '{}');
+            if (!rooms[code]) {
+                document.getElementById('errorMsg').textContent = 'Комната не найдена';
+                return;
+            }
+            
             myName = name;
-            isHost = false;
             myId = 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            isHost = false;
+            currentRoomCode = code;
             
-            const host = discoveredHosts.get(hostId);
+            roomCodeDisplay.textContent = code;
             
+            // Получаем offer хоста
+            const offer = getOffer(code);
+            if (!offer) {
+                document.getElementById('errorMsg').textContent = 'Ошибка получения данных комнаты';
+                return;
+            }
+            
+            // Создаем peer connection
+            createPeerConnection();
+            
+            peerConnection.ondatachannel = (event) => {
+                dataChannel = event.channel;
+                setupDataChannel();
+            };
+            
+            // Устанавливаем remote description
+            peerConnection.setRemoteDescription(offer)
+                .then(() => peerConnection.createAnswer())
+                .then(answer => peerConnection.setLocalDescription(answer))
+                .then(() => {
+                    // Сохраняем answer
+                    saveAnswer(code, peerConnection.localDescription);
+                    
+                    // Добавляем себя в список игроков
+                    players.set(myId, {
+                        id: myId,
+                        name: myName,
+                        color: selectedColor,
+                        x: 0, y: 0,
+                        lastDir: { x: 0, y: -1 },
+                        r: 18,
+                        isHost: false
+                    });
+                    
+                    showGame();
+                })
+                .catch(error => {
+                    console.error('Error joining room:', error);
+                    document.getElementById('errorMsg').textContent = 'Ошибка подключения';
+                });
+        }
+        
+        // ============== WebRTC НАСТРОЙКИ ==============
+        function createPeerConnection() {
             const configuration = {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
                 ]
             };
             
             peerConnection = new RTCPeerConnection(configuration);
             
-            peerConnection.ondatachannel = (event) => {
-                dataChannel = event.channel;
-                setupLocalDataChannel();
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    // Сохраняем candidate
+                    if (isHost) {
+                        saveCandidate(currentRoomCode, event.candidate, true);
+                    } else {
+                        saveCandidate(currentRoomCode, event.candidate, false);
+                    }
+                }
             };
             
-            peerConnection.setRemoteDescription(host.offer)
-                .then(() => peerConnection.createAnswer())
-                .then(answer => peerConnection.setLocalDescription(answer))
-                .then(() => {
-                    // Отправляем answer обратно хосту (в реальном приложении через signaling server)
-                    console.log('Answer created', peerConnection.localDescription);
-                    
-                    // Добавляем себя в список игроков
-                    players.set(myId, {
-                        id: myId,
-                        name: myName,
-                        color: selectedColor,
-                        x: 0, y: 0,
-                        lastDir: { x: 0, y: -1 },
-                        r: 18
-                    });
-                    
-                    showGame();
-                });
+            peerConnection.oniceconnectionstatechange = () => {
+                console.log('ICE state:', peerConnection.iceConnectionState);
+                if (peerConnection.iceConnectionState === 'connected') {
+                    connectionStatus.textContent = '🟢 Подключено';
+                }
+            };
+            
+            // Периодически проверяем новые candidates
+            startCandidateCheck();
         }
         
-        function setupLocalDataChannel() {
+        function setupDataChannel() {
             dataChannel.onopen = () => {
                 console.log('Data channel opened');
-                connectionStatus.textContent = '🟢 Подключено';
                 
                 // Отправляем информацию о себе
-                sendLocalData({
-                    type: 'join',
+                sendData({
+                    type: 'playerJoined',
                     player: {
                         id: myId,
                         name: myName,
@@ -762,26 +919,43 @@
                         r: 18
                     }
                 });
+                
+                // Если мы хост, отправляем текущее состояние
+                if (isHost) {
+                    sendData({
+                        type: 'sync',
+                        players: Array.from(players.values()),
+                        obstacles: playerObstacles
+                    });
+                }
             };
             
             dataChannel.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                handleLocalData(data);
+                handleData(data);
             };
         }
         
-        function sendLocalData(data) {
+        function sendData(data) {
             if (dataChannel && dataChannel.readyState === 'open') {
                 dataChannel.send(JSON.stringify(data));
             }
         }
         
-        function handleLocalData(data) {
+        function handleData(data) {
             switch(data.type) {
-                case 'join':
                 case 'playerJoined':
                     players.set(data.player.id, data.player);
                     updatePlayerList();
+                    
+                    // Если мы хост, отправляем синхронизацию
+                    if (isHost) {
+                        sendData({
+                            type: 'sync',
+                            players: Array.from(players.values()),
+                            obstacles: playerObstacles
+                        });
+                    }
                     break;
                     
                 case 'move':
@@ -796,337 +970,118 @@
                 case 'createObstacle':
                     playerObstacles.push(data.obstacle);
                     updateCounter();
+                    
+                    // Если мы хост, рассылаем всем
+                    if (isHost) {
+                        sendData({
+                            type: 'createObstacle',
+                            obstacle: data.obstacle
+                        });
+                    }
                     break;
                     
                 case 'deleteObstacle':
                     playerObstacles.splice(data.index, 1);
                     updateCounter();
+                    
+                    // Если мы хост, рассылаем всем
+                    if (isHost) {
+                        sendData({
+                            type: 'deleteObstacle',
+                            index: data.index
+                        });
+                    }
+                    break;
+                    
+                case 'sync':
+                    if (data.players) {
+                        data.players.forEach(p => {
+                            if (p.id !== myId) {
+                                players.set(p.id, p);
+                            }
+                        });
+                    }
+                    if (data.obstacles) {
+                        playerObstacles = data.obstacles;
+                    }
+                    updatePlayerList();
+                    updateCounter();
                     break;
             }
         }
         
-        // ============== PHOTON МУЛЬТИПЛЕЕР ==============
-        function initPhoton() {
-            try {
-                photonStatus.textContent = '🟡 Проверка Photon...';
+        // ============== ПРОВЕРКА CANDIDATES ==============
+        function startCandidateCheck() {
+            setInterval(() => {
+                if (!currentRoomCode || !peerConnection) return;
                 
-                // Проверяем, загрузился ли Photon
-                if (typeof Photon === 'undefined' || !Photon.LoadBalancing) {
-                    console.log('Photon not loaded, using local multiplayer');
-                    useLocalMultiplayer = true;
-                    initLocalMultiplayer();
-                    return;
-                }
-                
-                photonStatus.textContent = '🟢 Photon загружен, подключение...';
-                
-                photon = new Photon.LoadBalancing.LoadBalancingClient(Photon.ConnectionProtocol.Wss, photonAppId, '1.0');
-                
-                photon.onStateChange = function(state) {
-                    console.log('Photon state:', state);
-                    
-                    if (state === 8 || state === 9) { // Authenticated or Joined
-                        isPhotonConnected = true;
-                        photonInitialized = true;
-                        connectionStatus.textContent = '🟢 Подключено к Photon';
-                        photonStatus.textContent = '🟢 Photon готов';
-                        document.getElementById('errorMsg').textContent = '';
-                    } else if (state === 0) { // Disconnected
-                        isPhotonConnected = false;
-                        connectionStatus.textContent = '🔴 Отключено от Photon';
-                        photonStatus.textContent = '🟡 Переподключение...';
-                    } else if (state === 1) { // Connecting
-                        connectionStatus.textContent = '🟡 Подключение к Photon...';
-                        photonStatus.textContent = '🟡 Подключение...';
-                    }
-                };
-                
-                photon.onEvent = function(code, data, actorNr) {
-                    handlePhotonEvent(code, data, actorNr);
-                };
-                
-                photon.onActorJoin = function(actor) {
-                    console.log('Actor joined:', actor);
-                    sendPhotonEvent(2, { type: 'requestPlayerInfo' });
-                };
-                
-                photon.onActorLeave = function(actor) {
-                    console.log('Actor left:', actor);
-                    for (let [id, p] of players) {
-                        if (p.actorNr === actor) {
-                            players.delete(id);
-                            break;
-                        }
-                    }
-                    updatePlayerList();
-                };
-                
-                photon.onRoomList = function(rooms) {
-                    updateRoomsList(rooms);
-                };
-                
-                photon.onJoinRoom = function() {
-                    console.log('Joined room:', photon.myRoom().name);
-                    connectionStatus.textContent = '🟢 В комнате';
-                    roomInfo.textContent = `Комната: ${photon.myRoom().name}`;
-                    
-                    setTimeout(() => {
-                        sendPhotonEvent(1, {
-                            type: 'playerInfo',
-                            player: {
-                                id: myId,
-                                name: myName,
-                                color: selectedColor,
-                                x: 0,
-                                y: 0,
-                                lastDir: lastDir,
-                                r: 18,
-                                actorNr: photon.myActor().actorNr
-                            }
+                try {
+                    if (isHost) {
+                        // Хост получает candidates от клиента
+                        const candidates = getCandidates(currentRoomCode, true);
+                        candidates.forEach(candidate => {
+                            peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        });
+                    } else {
+                        // Клиент получает candidates от хоста
+                        const candidates = getCandidates(currentRoomCode, false);
+                        candidates.forEach(candidate => {
+                            peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                         });
                         
-                        sendPhotonEvent(2, { type: 'requestAllPlayers' });
-                    }, 500);
-                    
-                    showGame();
-                };
-                
-                photon.onCreateRoom = function() {
-                    console.log('Room created');
-                };
-                
-                photon.onError = function(error) {
-                    console.error('Photon error:', error);
-                    connectionStatus.textContent = '🔴 Ошибка подключения';
-                    document.getElementById('errorMsg').textContent = 'Ошибка: ' + (error.message || error);
-                };
-                
-                // Подключаемся
-                photon.connectToRegionMaster('eu');
-                
-            } catch (e) {
-                console.error('Photon init error:', e);
-                useLocalMultiplayer = true;
-                initLocalMultiplayer();
-            }
-        }
-        
-        function sendPhotonEvent(code, data) {
-            try {
-                if (photon && photon.myRoom() && isPhotonConnected) {
-                    photon.raiseEvent(code, data, { reliability: true, receivers: 0 });
-                }
-            } catch (e) {
-                console.error('Send event error:', e);
-            }
-        }
-        
-        function handlePhotonEvent(code, data, actorNr) {
-            if (actorNr === photon?.myActor()?.actorNr) return;
-            
-            try {
-                switch(code) {
-                    case 1:
-                        if (data.type === 'playerInfo' && data.player) {
-                            players.set(data.player.id, data.player);
-                            updatePlayerList();
-                        }
-                        break;
-                        
-                    case 2:
-                        if (data.type === 'requestPlayerInfo') {
-                            sendPhotonEvent(1, {
-                                type: 'playerInfo',
-                                player: {
-                                    id: myId,
-                                    name: myName,
-                                    color: selectedColor,
-                                    x: player.x,
-                                    y: player.y,
-                                    lastDir: lastDir,
-                                    r: 18,
-                                    actorNr: photon.myActor().actorNr
-                                }
-                            });
-                        } else if (data.type === 'requestAllPlayers') {
-                            const playersList = Array.from(players.values());
-                            sendPhotonEvent(3, { type: 'allPlayers', players: playersList });
-                        }
-                        break;
-                        
-                    case 3:
-                        if (data.type === 'allPlayers' && data.players) {
-                            data.players.forEach(p => {
-                                if (p.id !== myId) {
-                                    players.set(p.id, p);
-                                }
-                            });
-                            updatePlayerList();
-                        }
-                        break;
-                        
-                    case 4:
-                        if (data.type === 'move' && data.id) {
-                            const p = players.get(data.id);
-                            if (p) {
-                                p.x = data.x;
-                                p.y = data.y;
-                                p.lastDir = data.lastDir;
+                        // Проверяем, не появился ли answer
+                        if (!peerConnection.currentRemoteDescription) {
+                            const answer = getAnswer(currentRoomCode);
+                            if (answer) {
+                                peerConnection.setRemoteDescription(answer);
                             }
                         }
-                        break;
-                        
-                    case 5:
-                        if (data.type === 'createObstacle' && data.obstacle) {
-                            playerObstacles.push(data.obstacle);
-                            updateCounter();
-                        }
-                        break;
-                        
-                    case 6:
-                        if (data.type === 'deleteObstacle' && data.index !== undefined) {
-                            playerObstacles.splice(data.index, 1);
-                            updateCounter();
-                        }
-                        break;
+                    }
+                } catch (e) {
+                    console.error('Error checking candidates:', e);
                 }
-            } catch (e) {
-                console.error('Handle event error:', e);
-            }
+            }, 1000);
         }
         
-        function updateRoomsList(rooms) {
-            roomsList.innerHTML = '';
-            
-            if (!rooms || rooms.length === 0) {
-                roomsList.innerHTML = '<div style="text-align:center; padding:10px; color:#888;">❌ Нет доступных игр</div>';
-                return;
-            }
-            
-            rooms.forEach(room => {
-                const roomDiv = document.createElement('div');
-                roomDiv.className = 'room-item';
-                roomDiv.onclick = () => joinRoom(room.name);
-                roomDiv.innerHTML = `
-                    <div class="room-name">${room.name}</div>
-                    <div class="room-players">Игроки: ${room.playerCount}/20</div>
-                `;
-                roomsList.appendChild(roomDiv);
-            });
+        // ============== HEARTBEAT ==============
+        function startHeartbeat() {
+            setInterval(() => {
+                if (isHost && currentRoomCode) {
+                    registerRoom(currentRoomCode, myName);
+                }
+            }, 10000);
         }
         
-        function joinRoom(roomName) {
-            const name = document.getElementById('nameInput').value.trim();
-            if (!validateName(name)) return;
-            
-            if (!isPhotonConnected || !photonInitialized) {
-                document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
-                return;
-            }
-            
-            myName = name;
-            myId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            
-            try {
-                photon.opJoinRoom(roomName);
-                document.getElementById('errorMsg').textContent = 'Подключение к комнате...';
-            } catch (e) {
-                console.error('Join room error:', e);
-                document.getElementById('errorMsg').textContent = 'Ошибка при подключении к комнате';
-            }
-        }
+        // ============== ОБНОВЛЕНИЕ СПИСКА КОМНАТ ==============
+        setInterval(updateActiveRoomsList, 2000);
         
-        // Создание комнаты (Photon)
-        createRoomBtn.onclick = () => {
-            if (useLocalMultiplayer) {
-                createLocalRoom();
-                return;
-            }
-            
-            const name = document.getElementById('nameInput').value.trim();
-            if (!validateName(name)) return;
-            
-            if (!isPhotonConnected || !photonInitialized) {
-                document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
-                return;
-            }
-            
-            myName = name;
-            myId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            
-            const roomName = 'Комната_' + Math.random().toString(36).substr(2, 6).toUpperCase();
-            
-            try {
-                photon.opCreateRoom(roomName, { 
-                    maxPlayers: 20, 
-                    isVisible: true,
-                    isOpen: true
-                });
-                document.getElementById('errorMsg').textContent = 'Создание комнаты...';
-            } catch (e) {
-                console.error('Create room error:', e);
-                document.getElementById('errorMsg').textContent = 'Ошибка при создании комнаты';
-            }
-        };
-        
-        // Поиск комнат
-        scanBtn.onclick = () => {
-            if (useLocalMultiplayer) {
-                scanLocalHosts();
-                return;
-            }
-            
-            if (!isPhotonConnected || !photonInitialized) {
-                document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
-                return;
-            }
-            
-            roomsList.innerHTML = '<div style="text-align:center; padding:10px;">🔍 Поиск комнат...</div>';
-            
-            try {
-                photon.opFindFriends([]);
-            } catch (e) {
-                console.error('Scan rooms error:', e);
-                roomsList.innerHTML = '<div style="text-align:center; padding:10px; color:#888;">❌ Ошибка поиска</div>';
-            }
-        };
-        
+        // ============== ПРОВЕРКА ИМЕНИ ==============
         function validateName(name) {
-            if (name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
-                document.getElementById('errorMsg').textContent = 'Недопустимое имя';
+            if (name.length < 3 || name.length > 20) {
+                document.getElementById('errorMsg').textContent = 'Имя должно быть от 3 до 20 символов';
                 return false;
             }
             return true;
         }
         
+        // ============== ПОКАЗ ИГРЫ ==============
         function showGame() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
-            
-            players.set(myId, {
-                id: myId,
-                name: myName,
-                color: selectedColor,
-                x: 0,
-                y: 0,
-                lastDir: lastDir,
-                r: 18,
-                actorNr: photon ? photon?.myActor()?.actorNr : 0
-            });
-            
             updatePlayerList();
             updateCounter();
         }
         
+        // ============== ВЫХОД ==============
         function resetGame() {
-            if (photon && photon.myRoom() && !useLocalMultiplayer) {
-                try {
-                    photon.opLeaveRoom();
-                } catch (e) {}
+            if (isHost && currentRoomCode) {
+                unregisterRoom(currentRoomCode);
+                cleanupRoom(currentRoomCode);
             }
             
             if (peerConnection) {
                 peerConnection.close();
+                peerConnection = null;
             }
             
             playerObstacles = [];
@@ -1138,12 +1093,14 @@
             player.x = 0;
             player.y = 0;
             lastDir = { x: 0, y: -1 };
-            document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
-            connectionStatus.textContent = isPhotonConnected ? '🟢 Подключено к Photon' : '🟡 Подключение...';
+            document.getElementById('nameInput').value = getRandomPlayerName();
+            currentRoomCode = null;
+            isHost = false;
         }
         
         exitBtn.onclick = resetGame;
         
+        // ============== СБРОС ПО КОДУ ==============
         resetBtn.onclick = () => {
             codeDialog.classList.remove('hidden');
             codeInput.value = '';
@@ -1153,32 +1110,36 @@
         submitCode.onclick = () => {
             const code = codeInput.value.trim();
             if (code === RESET_CODE) {
-                if (useLocalMultiplayer) {
-                    sendLocalData({ type: 'reset' });
+                if (isHost) {
+                    // Хост сбрасывает игру
+                    playerObstacles = [];
+                    players.clear();
+                    
+                    players.set(myId, {
+                        id: myId,
+                        name: myName,
+                        color: selectedColor,
+                        x: 0, y: 0,
+                        lastDir: { x: 0, y: -1 },
+                        r: 18,
+                        isHost: true
+                    });
+                    
+                    player.x = 0;
+                    player.y = 0;
+                    
+                    // Рассылаем сброс всем
+                    sendData({
+                        type: 'sync',
+                        players: Array.from(players.values()),
+                        obstacles: []
+                    });
+                    
+                    updatePlayerList();
+                    updateCounter();
                 } else {
-                    sendPhotonEvent(8, { type: 'reset' });
+                    alert('Только хост может сбросить игру!');
                 }
-                
-                playerObstacles = [];
-                players.clear();
-                
-                players.set(myId, {
-                    id: myId,
-                    name: myName,
-                    color: selectedColor,
-                    x: 0,
-                    y: 0,
-                    lastDir: lastDir,
-                    r: 18,
-                    actorNr: photon ? photon?.myActor()?.actorNr : 0
-                });
-                
-                player.x = 0;
-                player.y = 0;
-                
-                updatePlayerList();
-                updateCounter();
-                
                 codeDialog.classList.add('hidden');
             } else {
                 alert('Неверный код!');
@@ -1196,9 +1157,10 @@
             }
         });
         
+        // ============== ИГРОВАЯ ЛОГИКА ==============
         function updatePlayerList() {
             const list = Array.from(players.values())
-                .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}${p.id === myId ? ' (вы)' : ''}`)
+                .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}${p.id === myId ? ' (вы)' : ''}${p.isHost ? ' 👑' : ''}`)
                 .join('<br>');
             playerListDiv.innerHTML = `👥 Игроки (${players.size}):<br>${list}`;
         }
@@ -1249,23 +1211,13 @@
             }
             
             if (moved) {
-                if (useLocalMultiplayer) {
-                    sendLocalData({
-                        type: 'move',
-                        id: myId,
-                        x: player.x,
-                        y: player.y,
-                        lastDir: lastDir
-                    });
-                } else {
-                    sendPhotonEvent(4, {
-                        type: 'move',
-                        id: myId,
-                        x: player.x,
-                        y: player.y,
-                        lastDir: lastDir
-                    });
-                }
+                sendData({
+                    type: 'move',
+                    id: myId,
+                    x: player.x,
+                    y: player.y,
+                    lastDir: lastDir
+                });
             }
         }
         
@@ -1310,13 +1262,7 @@
             };
             
             playerObstacles.push(obstacle);
-            
-            if (useLocalMultiplayer) {
-                sendLocalData({ type: 'createObstacle', obstacle });
-            } else {
-                sendPhotonEvent(5, { type: 'createObstacle', obstacle });
-            }
-            
+            sendData({ type: 'createObstacle', obstacle });
             updateCounter();
         }
         
@@ -1337,13 +1283,7 @@
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
                         playerObstacles.splice(i, 1);
-                        
-                        if (useLocalMultiplayer) {
-                            sendLocalData({ type: 'deleteObstacle', index: i });
-                        } else {
-                            sendPhotonEvent(6, { type: 'deleteObstacle', index: i });
-                        }
-                        
+                        sendData({ type: 'deleteObstacle', index: i });
                         updateCounter();
                     }
                     return;
@@ -1369,6 +1309,7 @@
             counterDiv.textContent = `${myObstacles}/${MAX_PLAYER_OBSTACLES}`;
         }
         
+        // Джойстик
         function onStart(e) {
             e.preventDefault();
             drag = true;
@@ -1607,20 +1548,6 @@
             draw();
             requestAnimationFrame(loop);
         }
-        
-        // Инициализация
-        window.onload = function() {
-            // Пробуем Photon, если не загрузится - используем локальный мультиплеер
-            setTimeout(() => {
-                if (typeof Photon === 'undefined') {
-                    console.log('Photon not available, using local multiplayer');
-                    useLocalMultiplayer = true;
-                    initLocalMultiplayer();
-                } else {
-                    initPhoton();
-                }
-            }, 2000); // Даем время на загрузку Photon
-        };
         
         loop();
     </script>
