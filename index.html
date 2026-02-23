@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mymap · мультиплеер</title>
+    <title>Mymap</title>
     <style>
         * {
             margin: 0;
@@ -21,399 +21,116 @@
             font-family: monospace;
             touch-action: none;
         }
-        #screen {
+        #menu {
             background: #2a3a2a;
             border-radius: 52px;
             padding: 30px;
-            box-shadow: 0 35px 50px #000000e0;
             color: #d0e0d0;
             width: min(400px, 90vw);
-        }
-        h2 {
             text-align: center;
-            margin-bottom: 30px;
+        }
+        h1 {
             font-size: 32px;
-            text-shadow: 3px 3px 0 #1a2a1a;
-            letter-spacing: 4px;
+            margin-bottom: 30px;
         }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-        input {
-            width: 100%;
-            padding: 15px;
-            background: #1a2a1a;
-            border: 3px solid #4a7a4a;
-            border-radius: 30px;
-            color: #d0e0d0;
-            font-size: 18px;
-            text-align: center;
-            outline: none;
-        }
-        input:focus {
-            border-color: #7cb57c;
-        }
-        .color-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .color-option {
-            aspect-ratio: 1;
-            border-radius: 15px;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: 0.1s;
-        }
-        .color-option.selected {
-            border-color: white;
-            transform: scale(1.05);
-            box-shadow: 0 0 15px white;
-        }
-        .color-white { background: #ffffff; }
-        .color-black { background: #222222; }
-        .color-red { background: #ff4444; }
-        .color-orange { background: #ff8844; }
-        .color-yellow { background: #ffff44; }
-        .color-green { background: #44ff44; }
-        .color-cyan { background: #44ffff; }
-        .color-blue { background: #4444ff; }
-        .color-pink { background: #ff88ff; }
-        .color-purple { background: #aa44ff; }
-        
         .btn {
+            display: block;
             width: 100%;
             padding: 18px;
+            margin: 10px 0;
             background: #4a7a4a;
             border: none;
             border-radius: 40px;
-            color: #d0e0d0;
+            color: white;
             font-size: 20px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 8px 0 #1a2a1a;
-            margin: 10px 0;
-            transition: 0.05s linear;
         }
         .btn:active {
             transform: translateY(5px);
             box-shadow: 0 3px 0 #1a2a1a;
         }
-        .btn.red {
-            background: #4a3a3a;
-            color: #ffb0b0;
-        }
-        #roomCode {
-            text-align: center;
-            margin: 15px 0;
+        #code {
             font-size: 32px;
             font-weight: bold;
             color: #ffffa0;
             background: #1a2a1a;
             padding: 15px;
             border-radius: 30px;
-            border: 3px solid #7cb57c;
+            margin: 15px 0;
             letter-spacing: 5px;
-        }
-        #errorMsg {
-            color: #ff8888;
-            text-align: center;
-            margin-top: 15px;
-            min-height: 25px;
         }
         #game {
             display: none;
         }
-        #game canvas {
+        canvas {
             display: block;
             width: min(380px, 80vw);
             height: min(380px, 80vw);
             background: #7cb57c;
             border-radius: 36px;
-            box-shadow: inset 0 0 0 4px #4a7a4a;
             margin: 10px auto;
         }
-        #coords {
-            text-align: center;
-            font-size: 16px;
-            margin: 5px 0;
-        }
-        #players {
-            margin: 10px 0;
-            padding: 10px;
-            background: #1a2a1a;
-            border-radius: 15px;
-            font-size: 12px;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-        #counter {
-            text-align: right;
-            font-size: 14px;
-            margin: 5px 0;
-        }
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-        }
-        .action-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 25px;
-            background: #3a4a3a;
-            box-shadow: 0 6px 0 #1a2a1a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            font-size: 28px;
-            color: #ff6b6b;
-        }
-        .action-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #1a2a1a;
-        }
-        .joystick {
-            width: 120px;
-            height: 120px;
-            background: #3a4a3a;
-            border-radius: 999px;
-            box-shadow: 0 8px 0 #1a2a1a;
-            position: relative;
-            touch-action: none;
-        }
-        .thumb {
-            position: absolute;
-            width: 42px;
-            height: 42px;
-            background: #7cb57c;
-            border-radius: 999px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 7px 14px #1a2a1a, 0 0 0 4px #4a7a4a;
-            transition: transform 0.02s;
-        }
-        .status {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 11px;
-            background: #1a2a1a80;
-            padding: 3px 6px;
-            border-radius: 8px;
-        }
-        .dialog {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: #00000080;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-        .dialog.hidden { display: none; }
-        .dialog-box {
-            background: #2a3a2a;
-            padding: 25px;
-            border-radius: 35px;
-            box-shadow: 0 20px 30px #000000;
-            border: 3px solid #5a7a5a;
-            width: min(280px, 75vw);
-        }
-        .dialog-box h3 {
-            text-align: center;
-            margin-bottom: 15px;
-        }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
-    <div id="screen">
-        <h2>MYMAP</h2>
-        
-        <div id="login">
-            <div class="input-group">
-                <label>ИМЯ (3-20 символов)</label>
-                <input type="text" id="nameInput" maxlength="20" value="Player_001">
-            </div>
-            <div class="input-group">
-                <label>ЦВЕТ</label>
-                <div class="color-grid" id="colorGrid"></div>
-            </div>
-            <button class="btn" id="createBtn">🚀 СОЗДАТЬ КОМНАТУ</button>
-            <div style="margin: 15px; text-align: center;">— или —</div>
-            <input type="text" id="roomInput" maxlength="6" placeholder="КОД КОМНАТЫ">
-            <button class="btn" id="joinBtn">🔑 ПРИСОЕДИНИТЬСЯ</button>
-            <div id="errorMsg"></div>
-        </div>
-
+    <div id="menu">
+        <h1>🎮 MYMAP</h1>
+        <button class="btn" onclick="createGame()">🔵 СОЗДАТЬ ИГРУ</button>
+        <button class="btn" onclick="joinGame()">🟢 ПРИСОЕДИНИТЬСЯ</button>
+        <div id="code"></div>
         <div id="game">
-            <div id="roomCode"></div>
-            <div id="coords">X: 0 | Y: 0</div>
-            <div id="players">👥 Игроки: 1</div>
-            <div id="counter">0/10</div>
-            <canvas id="world" width="600" height="600"></canvas>
-            <div class="controls">
-                <div class="action-btn" id="deleteBtn">✕</div>
-                <div class="joystick" id="joystick">
-                    <div class="thumb" id="thumb"></div>
-                </div>
-                <div class="action-btn" id="createBtn">➕</div>
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button class="btn red" id="exitBtn">ВЫХОД</button>
-                <button class="btn" id="resetBtn">СБРОС</button>
-            </div>
-            <div class="status" id="status"></div>
-        </div>
-    </div>
-
-    <div class="dialog hidden" id="codeDialog">
-        <div class="dialog-box">
-            <h3>🔐 ВВЕДИ КОД</h3>
-            <input type="text" id="codeInput" maxlength="7" placeholder="0000000">
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn" id="submitCode">OK</button>
-                <button class="btn red" id="cancelCode">ОТМЕНА</button>
+            <canvas id="canvas" width="600" height="600"></canvas>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                <button class="btn" style="width: 45%;" onclick="placeBlock()">➕</button>
+                <button class="btn" style="width: 45%;" onclick="exit()">✕</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Цвета
-        const colors = ['white', 'black', 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'pink', 'purple'];
-        let selectedColor = 'white';
-        
-        // Сетка цветов
-        const colorGrid = document.getElementById('colorGrid');
-        colors.forEach(color => {
-            const div = document.createElement('div');
-            div.className = `color-option color-${color}`;
-            if (color === 'white') div.classList.add('selected');
-            div.onclick = () => {
-                document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
-                div.classList.add('selected');
-                selectedColor = color;
-            };
-            colorGrid.appendChild(div);
-        });
-
-        // Генерация случайного числа
-        function getRandomNum() {
-            const num = Math.floor(Math.random() * 999) + 1;
-            return num.toString().padStart(3, '0');
-        }
-        document.getElementById('nameInput').value = 'Player_' + getRandomNum();
-
-        // Игровые переменные
-        let myId = 'player_' + Date.now() + '_' + Math.random();
-        let myName = '';
-        let isHost = false;
-        let roomId = '';
         let peer = null;
         let conn = null;
-        let players = new Map();
-        let obstacles = [];
-        const MAX_OBSTACLES = 10;
-        
-        // Статические препятствия
-        const staticObstacles = [];
-        for (let i = 0; i < 150; i++) {
-            let x, y;
-            do {
-                x = (Math.random() - 0.5) * 2000;
-                y = (Math.random() - 0.5) * 2000;
-            } while (Math.hypot(x, y) < 400);
-            
-            staticObstacles.push({
-                x: x - 25, y: y - 25,
-                w: 50 + Math.random() * 40,
-                h: 50 + Math.random() * 40
-            });
-        }
+        let isHost = false;
+        let myX = 0, myY = 0;
+        let otherX = 0, otherY = 0;
+        let blocks = [];
+        let ctx = document.getElementById('canvas').getContext('2d');
 
-        // Игрок
-        const player = { x: 0, y: 0, r: 18 };
-        let drag = false;
-        let vec = { x: 0, y: 0 };
-        let lastDir = { x: 0, y: -1 };
-        const SPEED = 5;
-
-        // DOM элементы
-        const loginDiv = document.getElementById('login');
-        const gameDiv = document.getElementById('game');
-        const canvas = document.getElementById('world');
-        const ctx = canvas.getContext('2d');
-        const coordsDiv = document.getElementById('coords');
-        const playersDiv = document.getElementById('players');
-        const counterDiv = document.getElementById('counter');
-        const statusDiv = document.getElementById('status');
-        const roomCodeDiv = document.getElementById('roomCode');
-        const errorMsg = document.getElementById('errorMsg');
-
-        // Создание комнаты
-        document.getElementById('createBtn').onclick = () => {
-            const name = document.getElementById('nameInput').value.trim();
-            if (name.length < 3) {
-                errorMsg.textContent = 'Имя должно быть от 3 символов';
-                return;
-            }
-            myName = name;
+        // Создать игру
+        function createGame() {
             isHost = true;
-            
-            roomId = Math.floor(100000 + Math.random() * 900000).toString();
+            let roomId = Math.floor(1000 + Math.random() * 9000).toString();
             
             peer = new Peer(roomId);
             
             peer.on('open', () => {
-                players.set(myId, { id: myId, name: myName, color: selectedColor, x: 0, y: 0, lastDir: {x:0,y:-1}, r:18 });
-                showGame();
+                document.getElementById('code').innerHTML = 'КОД: ' + roomId;
+                document.getElementById('game').style.display = 'block';
                 
-                peer.on('connection', (connection) => {
-                    conn = connection;
-                    conn.on('data', (data) => handleData(data));
-                    conn.on('close', () => statusDiv.textContent = 'Игрок отключился');
-                    
-                    // Отправляем текущее состояние
-                    conn.send({
-                        type: 'init',
-                        players: Array.from(players.values()),
-                        obstacles: obstacles
+                peer.on('connection', (c) => {
+                    conn = c;
+                    conn.on('data', (data) => {
+                        if (data.type === 'move') {
+                            otherX = data.x;
+                            otherY = data.y;
+                        }
+                        if (data.type === 'block') {
+                            blocks.push({x: data.x, y: data.y, owner: 'other'});
+                        }
                     });
                 });
+                
+                gameLoop();
             });
-            
-            peer.on('error', (err) => {
-                errorMsg.textContent = 'Ошибка: ' + err.type;
-            });
-        };
+        }
 
-        // Присоединение к комнате
-        document.getElementById('joinBtn').onclick = () => {
-            const name = document.getElementById('nameInput').value.trim();
-            const id = document.getElementById('roomInput').value.trim();
-            
-            if (name.length < 3) {
-                errorMsg.textContent = 'Имя должно быть от 3 символов';
-                return;
-            }
-            if (!id || id.length !== 6) {
-                errorMsg.textContent = 'Введите 6-значный код';
-                return;
-            }
-            
-            myName = name;
-            roomId = id;
+        // Присоединиться
+        function joinGame() {
+            let roomId = prompt('Введи код комнаты:');
+            if (!roomId) return;
             
             peer = new Peer();
             
@@ -421,384 +138,104 @@
                 conn = peer.connect(roomId);
                 
                 conn.on('open', () => {
-                    conn.on('data', (data) => handleData(data));
-                    conn.on('close', () => statusDiv.textContent = 'Соединение потеряно');
+                    document.getElementById('game').style.display = 'block';
                     
-                    conn.send({
-                        type: 'join',
-                        player: { id: myId, name: myName, color: selectedColor, x:0, y:0, lastDir:{x:0,y:-1}, r:18 }
+                    conn.on('data', (data) => {
+                        if (data.type === 'move') {
+                            otherX = data.x;
+                            otherY = data.y;
+                        }
+                        if (data.type === 'block') {
+                            blocks.push({x: data.x, y: data.y, owner: 'other'});
+                        }
                     });
                     
-                    players.set(myId, { id: myId, name: myName, color: selectedColor, x:0, y:0, lastDir:{x:0,y:-1}, r:18 });
-                });
-                
-                conn.on('error', () => {
-                    errorMsg.textContent = 'Комната не найдена';
+                    gameLoop();
                 });
             });
-            
-            peer.on('error', (err) => {
-                errorMsg.textContent = 'Ошибка подключения';
-            });
-        };
-
-        function handleData(data) {
-            switch(data.type) {
-                case 'init':
-                    data.players.forEach(p => players.set(p.id, p));
-                    obstacles = data.obstacles || [];
-                    showGame();
-                    break;
-                case 'join':
-                case 'playerJoined':
-                    players.set(data.player.id, data.player);
-                    if (isHost && conn) conn.send({ type: 'playerJoined', player: data.player });
-                    updatePlayers();
-                    break;
-                case 'move':
-                    const p = players.get(data.id);
-                    if (p) { p.x = data.x; p.y = data.y; p.lastDir = data.lastDir; }
-                    break;
-                case 'createObstacle':
-                    obstacles.push(data.obstacle);
-                    updateCounter();
-                    break;
-                case 'deleteObstacle':
-                    obstacles.splice(data.index, 1);
-                    updateCounter();
-                    break;
-            }
         }
 
-        function broadcast(data) {
-            if (conn && conn.open) conn.send(data);
-        }
-
-        function showGame() {
-            loginDiv.style.display = 'none';
-            gameDiv.style.display = 'block';
-            if (isHost) roomCodeDiv.textContent = roomId;
-            statusDiv.textContent = isHost ? 'Хост' : 'Подключено';
-            updatePlayers();
-            updateCounter();
-        }
-
-        function updatePlayers() {
-            let html = '👥 Игроки: ' + players.size + '<br>';
-            players.forEach(p => {
-                html += `<span style="color:${getColor(p.color)}">●</span> ${p.name}${p.id===myId?' (вы)':''}<br>`;
-            });
-            playersDiv.innerHTML = html;
-        }
-
-        function updateCounter() {
-            const myObs = obstacles.filter(o => o.playerId === myId).length;
-            counterDiv.textContent = `${myObs}/${MAX_OBSTACLES}`;
-        }
-
-        function getColor(name) {
-            const colors = {
-                white: '#ffffff', black: '#222222', red: '#ff4444',
-                orange: '#ff8844', yellow: '#ffff44', green: '#44ff44',
-                cyan: '#44ffff', blue: '#4444ff', pink: '#ff88ff',
-                purple: '#aa44ff'
-            };
-            return colors[name] || '#7fd4ff';
-        }
-
-        function canMoveTo(nx, ny) {
-            for (let ob of staticObstacles) {
-                const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
-                const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
-                if (Math.hypot(nx - nearX, ny - nearY) < player.r) return false;
-            }
-            for (let ob of obstacles) {
-                const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
-                const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
-                if (Math.hypot(nx - nearX, ny - nearY) < player.r) return false;
-            }
-            for (let p of players.values()) {
-                if (p.id !== myId && Math.hypot(nx - p.x, ny - p.y) < player.r + p.r) return false;
-            }
-            return true;
-        }
-
-        function move(dx, dy) {
-            if (dx === 0 && dy === 0) return;
-            if (canMoveTo(player.x + dx, player.y + dy)) {
-                player.x += dx;
-                player.y += dy;
-                broadcast({ type: 'move', id: myId, x: player.x, y: player.y, lastDir });
-                return;
-            }
-            if (canMoveTo(player.x + dx, player.y)) {
-                player.x += dx;
-                broadcast({ type: 'move', id: myId, x: player.x, y: player.y, lastDir });
-            }
-            if (canMoveTo(player.x, player.y + dy)) {
-                player.y += dy;
-                broadcast({ type: 'move', id: myId, x: player.x, y: player.y, lastDir });
-            }
-        }
-
-        function createObstacle() {
-            const myObs = obstacles.filter(o => o.playerId === myId).length;
-            if (myObs >= MAX_OBSTACLES) return;
-            
-            const len = Math.hypot(lastDir.x, lastDir.y);
-            if (len < 0.1) return;
-            
-            const dirX = lastDir.x / len;
-            const dirY = lastDir.y / len;
-            
-            const newX = player.x + dirX * (player.r + 40);
-            const newY = player.y + dirY * (player.r + 40);
-            const w = 44;
-            
-            for (let ob of staticObstacles) {
-                if (!(newX + w/2 < ob.x || newX - w/2 > ob.x + ob.w || newY + w/2 < ob.y || newY - w/2 > ob.y + ob.h)) return;
-            }
-            for (let ob of obstacles) {
-                if (!(newX + w/2 < ob.x || newX - w/2 > ob.x + ob.w || newY + w/2 < ob.y || newY - w/2 > ob.y + ob.h)) return;
-            }
-            for (let p of players.values()) {
-                if (Math.hypot(newX - p.x, newY - p.y) < player.r + w/2) return;
-            }
-            
-            const obstacle = { playerId: myId, playerColor: selectedColor, x: newX - w/2, y: newY - w/2, w, h: w };
-            obstacles.push(obstacle);
-            broadcast({ type: 'createObstacle', obstacle });
-            updateCounter();
-        }
-
-        function deleteObstacleAtDot() {
-            const len = Math.hypot(lastDir.x, lastDir.y);
-            if (len < 0.1) return;
-            
-            const dirX = lastDir.x / len;
-            const dirY = lastDir.y / len;
-            const dotX = player.x + dirX * (player.r + 37);
-            const dotY = player.y + dirY * (player.r + 37);
-            
-            for (let i = 0; i < obstacles.length; i++) {
-                const ob = obstacles[i];
-                if (dotX >= ob.x && dotX <= ob.x + ob.w && dotY >= ob.y && dotY <= ob.y + ob.h) {
-                    if (ob.playerId === myId) {
-                        obstacles.splice(i, 1);
-                        broadcast({ type: 'deleteObstacle', index: i });
-                        updateCounter();
-                    }
-                    return;
-                }
-            }
-        }
-
-        // Джойстик
-        const joy = document.getElementById('joystick');
-        const thumb = document.getElementById('thumb');
-        
-        joy.addEventListener('mousedown', startDrag);
-        joy.addEventListener('touchstart', startDrag, { passive: false });
-        
-        function startDrag(e) {
-            e.preventDefault();
-            drag = true;
-        }
-
-        document.addEventListener('mousemove', onDrag);
-        document.addEventListener('touchmove', onDrag, { passive: false });
-        document.addEventListener('mouseup', stopDrag);
-        document.addEventListener('touchend', stopDrag);
-
-        function onDrag(e) {
-            if (!drag) return;
-            e.preventDefault();
-            
-            const rect = joy.getBoundingClientRect();
-            const cx = rect.left + rect.width/2;
-            const cy = rect.top + rect.height/2;
-            
-            let x, y;
-            if (e.touches) {
-                x = e.touches[0].clientX;
-                y = e.touches[0].clientY;
-            } else {
-                x = e.clientX;
-                y = e.clientY;
-            }
-            
-            let dx = x - cx;
-            let dy = y - cy;
-            const dist = Math.hypot(dx, dy);
-            const maxDist = 35;
-            
-            if (dist > maxDist) {
-                dx = (dx / dist) * maxDist;
-                dy = (dy / dist) * maxDist;
-            }
-            
-            thumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-            
-            if (dist > 5) {
-                vec.x = dx / maxDist;
-                vec.y = dy / maxDist;
-                lastDir.x = vec.x;
-                lastDir.y = vec.y;
-            } else {
-                vec.x = 0;
-                vec.y = 0;
-            }
-        }
-
-        function stopDrag(e) {
-            e.preventDefault();
-            drag = false;
-            thumb.style.transform = 'translate(-50%, -50%)';
-            vec.x = 0;
-            vec.y = 0;
-        }
-
-        // Кнопки
-        document.getElementById('createBtn').addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            createObstacle();
-        });
-        
-        document.getElementById('deleteBtn').addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            deleteObstacleAtDot();
+        // Управление с клавиш (для телефона не нужно, но оставим)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') myY -= 10;
+            if (e.key === 'ArrowDown') myY += 10;
+            if (e.key === 'ArrowLeft') myX -= 10;
+            if (e.key === 'ArrowRight') myX += 10;
+            sendMove();
         });
 
-        document.getElementById('exitBtn').onclick = () => {
+        // Отправка позиции
+        function sendMove() {
+            if (conn) {
+                conn.send({type: 'move', x: myX, y: myY});
+            }
+        }
+
+        // Поставить блок
+        function placeBlock() {
+            if (conn) {
+                blocks.push({x: myX, y: myY, owner: 'me'});
+                conn.send({type: 'block', x: myX, y: myY});
+            }
+        }
+
+        // Выход
+        function exit() {
             location.reload();
-        };
+        }
 
-        // Сброс
-        const resetBtn = document.getElementById('resetBtn');
-        const codeDialog = document.getElementById('codeDialog');
-        const codeInput = document.getElementById('codeInput');
-        
-        resetBtn.onclick = () => {
-            codeDialog.classList.remove('hidden');
-            codeInput.value = '';
-        };
-        
-        document.getElementById('submitCode').onclick = () => {
-            if (codeInput.value === '6787001') {
-                if (isHost) {
-                    obstacles = [];
-                    broadcast({ type: 'reset' });
-                    codeDialog.classList.add('hidden');
-                } else {
-                    alert('Только хост может сбросить');
-                }
-            } else {
-                alert('Неверный код');
-            }
-        };
-        
-        document.getElementById('cancelCode').onclick = () => {
-            codeDialog.classList.add('hidden');
-        };
-
-        // Отрисовка
-        function draw() {
+        // Игровой цикл
+        function gameLoop() {
             ctx.clearRect(0, 0, 600, 600);
             
-            const camX = player.x - 300;
-            const camY = player.y - 300;
-            
+            // Фон
             ctx.fillStyle = '#7cb57c';
             ctx.fillRect(0, 0, 600, 600);
             
-            ctx.fillStyle = '#5a4f4a';
-            staticObstacles.forEach(ob => {
-                const x = ob.x - camX;
-                const y = ob.y - camY;
-                if (x + ob.w > -50 && x < 650 && y + ob.h > -50 && y < 650) {
-                    ctx.fillRect(x, y, ob.w, ob.h);
-                }
-            });
-            
-            obstacles.forEach(ob => {
-                const x = ob.x - camX;
-                const y = ob.y - camY;
-                if (x + ob.w > -50 && x < 650 && y + ob.h > -50 && y < 650) {
-                    ctx.beginPath();
-                    ctx.arc(x + ob.w/2, y + ob.w/2, ob.w/2, 0, Math.PI*2);
-                    ctx.fillStyle = getColor(ob.playerColor);
-                    ctx.fill();
-                    ctx.strokeStyle = '#3f7080';
-                    ctx.stroke();
-                }
-            });
-            
-            players.forEach(p => {
-                if (p.id === myId) return;
-                const x = 300 + (p.x - player.x);
-                const y = 300 + (p.y - player.y);
-                if (x > -50 && x < 650 && y > -50 && y < 650) {
-                    ctx.beginPath();
-                    ctx.arc(x, y, p.r, 0, Math.PI*2);
-                    ctx.fillStyle = getColor(p.color);
-                    ctx.fill();
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
-                    
-                    ctx.font = 'bold 14px monospace';
-                    ctx.fillStyle = 'white';
-                    ctx.shadowColor = 'black';
-                    ctx.shadowBlur = 4;
-                    ctx.fillText(p.name, x, y - 28);
-                    ctx.shadowBlur = 0;
-                }
-            });
-            
-            ctx.beginPath();
-            ctx.arc(300, 300, player.r, 0, Math.PI*2);
-            ctx.fillStyle = getColor(selectedColor);
-            ctx.fill();
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            ctx.font = 'bold 14px monospace';
-            ctx.fillStyle = 'white';
-            ctx.shadowColor = 'black';
-            ctx.shadowBlur = 4;
-            ctx.fillText(myName, 300, 300 - 28);
-            ctx.shadowBlur = 0;
-            
-            const dir = drag ? vec : lastDir;
-            const len = Math.hypot(dir.x, dir.y);
-            if (len > 0.1) {
-                const dist = 12 + (drag ? len * 25 : 25);
-                const x = 300 + (dir.x/len) * (player.r + dist);
-                const y = 300 + (dir.y/len) * (player.r + dist);
+            // Блоки
+            blocks.forEach(b => {
+                ctx.fillStyle = b.owner === 'me' ? '#7fd4ff' : '#ff7f7f';
                 ctx.beginPath();
-                ctx.arc(x, y, 6, 0, Math.PI*2);
-                ctx.fillStyle = '#6a6a6a';
+                ctx.arc(300 + (b.x - myX), 300 + (b.y - myY), 20, 0, Math.PI*2);
                 ctx.fill();
-            }
+            });
             
+            // Другой игрок
+            ctx.fillStyle = '#ff7f7f';
             ctx.beginPath();
-            ctx.arc(300 - player.x, 300 - player.y, 14, 0, Math.PI*2);
-            ctx.fillStyle = '#ffffff60';
+            ctx.arc(300 + (otherX - myX), 300 + (otherY - myY), 25, 0, Math.PI*2);
             ctx.fill();
-            ctx.strokeStyle = '#ffffffa0';
-            ctx.stroke();
             
-            coordsDiv.textContent = `X: ${Math.round(player.x)} | Y: ${Math.round(player.y)}`;
+            // Я
+            ctx.fillStyle = '#7fd4ff';
+            ctx.beginPath();
+            ctx.arc(300, 300, 25, 0, Math.PI*2);
+            ctx.fill();
+            
+            requestAnimationFrame(gameLoop);
         }
 
-        function loop() {
-            if (drag) move(vec.x * SPEED, vec.y * SPEED);
-            draw();
-            requestAnimationFrame(loop);
-        }
+        // Управление пальцем
+        let touchStart = null;
+        document.addEventListener('touchstart', (e) => {
+            touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        });
         
-        loop();
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (touchStart) {
+                let dx = (e.touches[0].clientX - touchStart.x) / 5;
+                let dy = (e.touches[0].clientY - touchStart.y) / 5;
+                myX += dx;
+                myY += dy;
+                sendMove();
+                touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+            }
+        }, {passive: false});
+        
+        document.addEventListener('touchend', () => {
+            touchStart = null;
+        });
     </script>
 </body>
 </html>
