@@ -405,9 +405,15 @@
             color: #d0e0d0;
             font-size: 14px;
         }
+        .photon-loading {
+            text-align: center;
+            color: #ffffa0;
+            margin: 10px 0;
+            font-size: 14px;
+        }
     </style>
-    <!-- Подключаем Photon -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/photon/2.0.0/photon.min.js"></script>
+    <!-- Подключаем Photon напрямую с официального CDN -->
+    <script src="https://cdn.photonengine.com/js/photon/v2/photon.min.js"></script>
 </head>
 <body>
     <div id="loginScreen">
@@ -420,6 +426,7 @@
             <label>ЦВЕТ</label>
             <div class="color-grid" id="colorGrid"></div>
         </div>
+        <div class="photon-loading" id="photonStatus">🟡 Загрузка Photon...</div>
         <button id="createRoomBtn">СОЗДАТЬ ИГРУ</button>
         
         <div id="joinPanel">
@@ -501,6 +508,7 @@
         let photon = null;
         let currentRoom = null;
         let isPhotonConnected = false;
+        let photonInitialized = false;
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -583,23 +591,55 @@
         const scanBtn = document.getElementById('scanBtn');
         const roomInfo = document.getElementById('roomInfo');
         const createRoomBtn = document.getElementById('createRoomBtn');
+        const photonStatus = document.getElementById('photonStatus');
+        
+        // Проверка загрузки Photon
+        function checkPhotonLoaded() {
+            return typeof Photon !== 'undefined' && Photon.LoadBalancing;
+        }
         
         // Инициализация Photon
         function initPhoton() {
             try {
+                photonStatus.textContent = '🟡 Загрузка Photon...';
+                
+                if (!checkPhotonLoaded()) {
+                    photonStatus.textContent = '🔴 Photon не загрузился, пробуем снова...';
+                    setTimeout(initPhoton, 1000);
+                    return;
+                }
+                
+                photonStatus.textContent = '🟢 Photon загружен, подключение...';
+                
                 photon = new Photon.LoadBalancing.LoadBalancingClient(Photon.ConnectionProtocol.Wss, photonAppId, '1.0');
                 
                 photon.onStateChange = function(state) {
                     console.log('Photon state:', state);
-                    if (state === 7) { // Connected
+                    // Photon state codes:
+                    // 0: Disconnected
+                    // 1: Connecting
+                    // 2: Connected
+                    // 3: JoinedLobby
+                    // 4: LeavingLobby
+                    // 5: WaitingForConnect
+                    // 6: WaitingForEncryption
+                    // 7: Authenticating
+                    // 8: Authenticated
+                    // 9: Joined
+                    
+                    if (state === 8 || state === 9) { // Authenticated or Joined
                         isPhotonConnected = true;
+                        photonInitialized = true;
                         connectionStatus.textContent = '🟢 Подключено к Photon';
+                        photonStatus.textContent = '🟢 Photon готов';
                         document.getElementById('errorMsg').textContent = '';
-                    } else if (state === 5) { // Connecting
-                        connectionStatus.textContent = '🟡 Подключение к Photon...';
                     } else if (state === 0) { // Disconnected
                         isPhotonConnected = false;
                         connectionStatus.textContent = '🔴 Отключено от Photon';
+                        photonStatus.textContent = '🟡 Переподключение...';
+                    } else if (state === 1) { // Connecting
+                        connectionStatus.textContent = '🟡 Подключение к Photon...';
+                        photonStatus.textContent = '🟡 Подключение...';
                     }
                 };
                 
@@ -665,7 +705,7 @@
                 photon.onError = function(error) {
                     console.error('Photon error:', error);
                     connectionStatus.textContent = '🔴 Ошибка подключения';
-                    document.getElementById('errorMsg').textContent = 'Ошибка подключения к серверу: ' + error;
+                    document.getElementById('errorMsg').textContent = 'Ошибка: ' + (error.message || error);
                 };
                 
                 // Подключаемся к мастер-серверу
@@ -673,14 +713,18 @@
                 
             } catch (e) {
                 console.error('Photon init error:', e);
-                document.getElementById('errorMsg').textContent = 'Ошибка инициализации Photon';
+                photonStatus.textContent = '🔴 Ошибка Photon: ' + e.message;
+                document.getElementById('errorMsg').textContent = 'Ошибка инициализации Photon: ' + e.message;
+                
+                // Пробуем снова через 3 секунды
+                setTimeout(initPhoton, 3000);
             }
         }
         
         // Отправка события через Photon
         function sendPhotonEvent(code, data) {
             try {
-                if (photon && photon.myRoom()) {
+                if (photon && photon.myRoom() && isPhotonConnected) {
                     photon.raiseEvent(code, data, { reliability: true, receivers: 0 }); // 0 = все
                 }
             } catch (e) {
@@ -808,7 +852,7 @@
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
             
-            if (!isPhotonConnected) {
+            if (!isPhotonConnected || !photonInitialized) {
                 document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
                 return;
             }
@@ -818,6 +862,7 @@
             
             try {
                 photon.opJoinRoom(roomName);
+                document.getElementById('errorMsg').textContent = 'Подключение к комнате...';
             } catch (e) {
                 console.error('Join room error:', e);
                 document.getElementById('errorMsg').textContent = 'Ошибка при подключении к комнате';
@@ -829,7 +874,7 @@
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
             
-            if (!isPhotonConnected) {
+            if (!isPhotonConnected || !photonInitialized) {
                 document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
                 return;
             }
@@ -854,7 +899,7 @@
         
         // Поиск комнат
         scanBtn.onclick = () => {
-            if (!isPhotonConnected) {
+            if (!isPhotonConnected || !photonInitialized) {
                 document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
                 return;
             }
@@ -1373,9 +1418,30 @@
             requestAnimationFrame(loop);
         }
         
-        // Инициализация Photon при загрузке
-        window.onload = () => {
-            initPhoton();
+        // Инициализация Photon после загрузки страницы
+        window.onload = function() {
+            // Проверяем загрузку Photon
+            if (checkPhotonLoaded()) {
+                initPhoton();
+            } else {
+                photonStatus.textContent = '🟡 Загрузка Photon...';
+                // Ждем загрузку Photon
+                const checkInterval = setInterval(() => {
+                    if (checkPhotonLoaded()) {
+                        clearInterval(checkInterval);
+                        initPhoton();
+                    }
+                }, 100);
+                
+                // Таймаут через 10 секунд
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    if (!photonInitialized) {
+                        photonStatus.textContent = '🔴 Photon не загрузился';
+                        document.getElementById('errorMsg').textContent = 'Не удалось загрузить Photon. Проверьте интернет-соединение.';
+                    }
+                }, 10000);
+            }
         };
         
         loop();
