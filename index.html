@@ -420,10 +420,10 @@
             <label>ЦВЕТ</label>
             <div class="color-grid" id="colorGrid"></div>
         </div>
-        <button id="createRoomBtn">🔵 СОЗДАТЬ ИГРУ</button>
+        <button id="createRoomBtn">СОЗДАТЬ ИГРУ</button>
         
         <div id="joinPanel">
-            <button id="scanBtn">🔍 НАЙТИ ИГРЫ</button>
+            <button id="scanBtn">НАЙТИ ИГРЫ</button>
             <div id="roomsList"></div>
             <div style="text-align: center; color: #a0d0a0; font-size: 12px;">
                 Photon Cloud мультиплеер
@@ -497,9 +497,10 @@
         let playerObstacles = [];
         
         // Photon настройки
-        const photonAppId = '69a76040-59ee-46c4-8f15-235ced9d9b6d'; // Замените на ваш App ID с Photon Dashboard
+        const photonAppId = '69a76040-59ee-46c4-8f15-235ced9d9b6d';
         let photon = null;
         let currentRoom = null;
+        let isPhotonConnected = false;
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -581,226 +582,291 @@
         const roomsList = document.getElementById('roomsList');
         const scanBtn = document.getElementById('scanBtn');
         const roomInfo = document.getElementById('roomInfo');
+        const createRoomBtn = document.getElementById('createRoomBtn');
         
         // Инициализация Photon
         function initPhoton() {
-            photon = new Photon.LoadBalancing.LoadBalancingClient(Photon.ConnectionProtocol.Wss, photonAppId, '1.0');
-            
-            photon.onStateChange = function(state) {
-                console.log('Photon state:', state);
-                if (state === 7) { // Connected
-                    connectionStatus.textContent = '🟢 Подключено к Photon';
-                } else if (state === 5) { // Connecting
-                    connectionStatus.textContent = '🟡 Подключение к Photon...';
-                }
-            };
-            
-            photon.onEvent = function(code, data, actorNr) {
-                handlePhotonEvent(code, data, actorNr);
-            };
-            
-            photon.onActorJoin = function(actor) {
-                console.log('Actor joined:', actor);
-                // Запрашиваем информацию о новом игроке
-                sendPhotonEvent(2, { type: 'requestPlayerInfo' });
-            };
-            
-            photon.onActorLeave = function(actor) {
-                console.log('Actor left:', actor);
-                // Удаляем игрока
-                for (let [id, p] of players) {
-                    if (p.actorNr === actor) {
-                        players.delete(id);
-                        break;
-                    }
-                }
-                updatePlayerList();
-            };
-            
-            photon.onRoomList = function(rooms) {
-                updateRoomsList(rooms);
-            };
-            
-            photon.onJoinRoom = function() {
-                console.log('Joined room:', photon.myRoom().name);
-                connectionStatus.textContent = '🟢 В комнате';
-                roomInfo.textContent = `Комната: ${photon.myRoom().name}`;
+            try {
+                photon = new Photon.LoadBalancing.LoadBalancingClient(Photon.ConnectionProtocol.Wss, photonAppId, '1.0');
                 
-                // Отправляем информацию о себе
-                sendPhotonEvent(1, {
-                    type: 'playerInfo',
-                    player: {
-                        id: myId,
-                        name: myName,
-                        color: selectedColor,
-                        x: 0, y: 0,
-                        lastDir: lastDir,
-                        r: 18,
-                        actorNr: photon.myActor().actorNr
+                photon.onStateChange = function(state) {
+                    console.log('Photon state:', state);
+                    if (state === 7) { // Connected
+                        isPhotonConnected = true;
+                        connectionStatus.textContent = '🟢 Подключено к Photon';
+                        document.getElementById('errorMsg').textContent = '';
+                    } else if (state === 5) { // Connecting
+                        connectionStatus.textContent = '🟡 Подключение к Photon...';
+                    } else if (state === 0) { // Disconnected
+                        isPhotonConnected = false;
+                        connectionStatus.textContent = '🔴 Отключено от Photon';
                     }
-                });
+                };
                 
-                // Запрашиваем всех игроков
-                sendPhotonEvent(2, { type: 'requestAllPlayers' });
+                photon.onEvent = function(code, data, actorNr) {
+                    handlePhotonEvent(code, data, actorNr);
+                };
                 
-                showGame();
-            };
-            
-            photon.onError = function(error) {
-                console.error('Photon error:', error);
-                connectionStatus.textContent = '🔴 Ошибка подключения';
-                document.getElementById('errorMsg').textContent = 'Ошибка подключения к серверу';
-            };
-        }
-        
-        // Отправка события через Photon
-        function sendPhotonEvent(code, data) {
-            if (photon && photon.myRoom()) {
-                photon.raiseEvent(code, data, { reliability: true, receivers: 0 }); // 0 = все
-            }
-        }
-        
-        // Обработка событий Photon
-        function handlePhotonEvent(code, data, actorNr) {
-            if (actorNr === photon.myActor().actorNr) return; // Игнорируем свои события
-            
-            switch(code) {
-                case 1: // Информация об игроке
-                    if (data.type === 'playerInfo') {
-                        players.set(data.player.id, data.player);
-                        updatePlayerList();
+                photon.onActorJoin = function(actor) {
+                    console.log('Actor joined:', actor);
+                    // Запрашиваем информацию о новом игроке
+                    sendPhotonEvent(2, { type: 'requestPlayerInfo' });
+                };
+                
+                photon.onActorLeave = function(actor) {
+                    console.log('Actor left:', actor);
+                    // Удаляем игрока
+                    for (let [id, p] of players) {
+                        if (p.actorNr === actor) {
+                            players.delete(id);
+                            break;
+                        }
                     }
-                    break;
+                    updatePlayerList();
+                };
+                
+                photon.onRoomList = function(rooms) {
+                    updateRoomsList(rooms);
+                };
+                
+                photon.onJoinRoom = function() {
+                    console.log('Joined room:', photon.myRoom().name);
+                    connectionStatus.textContent = '🟢 В комнате';
+                    roomInfo.textContent = `Комната: ${photon.myRoom().name}`;
                     
-                case 2: // Запросы
-                    if (data.type === 'requestPlayerInfo') {
-                        // Отправляем информацию о себе
+                    // Отправляем информацию о себе
+                    setTimeout(() => {
                         sendPhotonEvent(1, {
                             type: 'playerInfo',
                             player: {
                                 id: myId,
                                 name: myName,
                                 color: selectedColor,
-                                x: player.x,
-                                y: player.y,
+                                x: 0,
+                                y: 0,
                                 lastDir: lastDir,
                                 r: 18,
                                 actorNr: photon.myActor().actorNr
                             }
                         });
-                    } else if (data.type === 'requestAllPlayers') {
-                        // Отправляем всех игроков
-                        const playersList = Array.from(players.values());
-                        sendPhotonEvent(3, { type: 'allPlayers', players: playersList });
-                    }
-                    break;
+                        
+                        // Запрашиваем всех игроков
+                        sendPhotonEvent(2, { type: 'requestAllPlayers' });
+                    }, 500);
                     
-                case 3: // Список всех игроков
-                    if (data.type === 'allPlayers' && data.players) {
-                        data.players.forEach(p => {
-                            if (p.id !== myId) {
-                                players.set(p.id, p);
-                            }
-                        });
-                        updatePlayerList();
-                    }
-                    break;
-                    
-                case 4: // Движение
-                    if (data.type === 'move') {
-                        const p = players.get(data.id);
-                        if (p) {
-                            p.x = data.x;
-                            p.y = data.y;
-                            p.lastDir = data.lastDir;
+                    showGame();
+                };
+                
+                photon.onCreateRoom = function() {
+                    console.log('Room created');
+                    // Комната создана, onJoinRoom будет вызван автоматически
+                };
+                
+                photon.onError = function(error) {
+                    console.error('Photon error:', error);
+                    connectionStatus.textContent = '🔴 Ошибка подключения';
+                    document.getElementById('errorMsg').textContent = 'Ошибка подключения к серверу: ' + error;
+                };
+                
+                // Подключаемся к мастер-серверу
+                photon.connectToRegionMaster('eu');
+                
+            } catch (e) {
+                console.error('Photon init error:', e);
+                document.getElementById('errorMsg').textContent = 'Ошибка инициализации Photon';
+            }
+        }
+        
+        // Отправка события через Photon
+        function sendPhotonEvent(code, data) {
+            try {
+                if (photon && photon.myRoom()) {
+                    photon.raiseEvent(code, data, { reliability: true, receivers: 0 }); // 0 = все
+                }
+            } catch (e) {
+                console.error('Send event error:', e);
+            }
+        }
+        
+        // Обработка событий Photon
+        function handlePhotonEvent(code, data, actorNr) {
+            if (actorNr === photon?.myActor()?.actorNr) return; // Игнорируем свои события
+            
+            try {
+                switch(code) {
+                    case 1: // Информация об игроке
+                        if (data.type === 'playerInfo' && data.player) {
+                            players.set(data.player.id, data.player);
+                            updatePlayerList();
                         }
-                    }
-                    break;
-                    
-                case 5: // Создание препятствия
-                    if (data.type === 'createObstacle') {
-                        playerObstacles.push(data.obstacle);
-                        updateCounter();
-                    }
-                    break;
-                    
-                case 6: // Удаление препятствия
-                    if (data.type === 'deleteObstacle') {
-                        playerObstacles.splice(data.index, 1);
-                        updateCounter();
-                    }
-                    break;
-                    
-                case 7: // Синхронизация
-                    if (data.type === 'sync') {
-                        if (data.players) {
+                        break;
+                        
+                    case 2: // Запросы
+                        if (data.type === 'requestPlayerInfo') {
+                            // Отправляем информацию о себе
+                            sendPhotonEvent(1, {
+                                type: 'playerInfo',
+                                player: {
+                                    id: myId,
+                                    name: myName,
+                                    color: selectedColor,
+                                    x: player.x,
+                                    y: player.y,
+                                    lastDir: lastDir,
+                                    r: 18,
+                                    actorNr: photon.myActor().actorNr
+                                }
+                            });
+                        } else if (data.type === 'requestAllPlayers') {
+                            // Отправляем всех игроков
+                            const playersList = Array.from(players.values());
+                            sendPhotonEvent(3, { type: 'allPlayers', players: playersList });
+                        }
+                        break;
+                        
+                    case 3: // Список всех игроков
+                        if (data.type === 'allPlayers' && data.players) {
                             data.players.forEach(p => {
                                 if (p.id !== myId) {
                                     players.set(p.id, p);
                                 }
                             });
+                            updatePlayerList();
                         }
-                        if (data.obstacles) {
-                            playerObstacles = data.obstacles;
+                        break;
+                        
+                    case 4: // Движение
+                        if (data.type === 'move' && data.id) {
+                            const p = players.get(data.id);
+                            if (p) {
+                                p.x = data.x;
+                                p.y = data.y;
+                                p.lastDir = data.lastDir;
+                            }
                         }
-                        updatePlayerList();
-                        updateCounter();
-                    }
-                    break;
+                        break;
+                        
+                    case 5: // Создание препятствия
+                        if (data.type === 'createObstacle' && data.obstacle) {
+                            playerObstacles.push(data.obstacle);
+                            updateCounter();
+                        }
+                        break;
+                        
+                    case 6: // Удаление препятствия
+                        if (data.type === 'deleteObstacle' && data.index !== undefined) {
+                            playerObstacles.splice(data.index, 1);
+                            updateCounter();
+                        }
+                        break;
+                        
+                    case 7: // Синхронизация
+                        if (data.type === 'sync') {
+                            if (data.players) {
+                                data.players.forEach(p => {
+                                    if (p.id !== myId) {
+                                        players.set(p.id, p);
+                                    }
+                                });
+                            }
+                            if (data.obstacles) {
+                                playerObstacles = data.obstacles;
+                            }
+                            updatePlayerList();
+                            updateCounter();
+                        }
+                        break;
+                }
+            } catch (e) {
+                console.error('Handle event error:', e);
             }
         }
         
         // Обновление списка комнат
         function updateRoomsList(rooms) {
-            if (rooms.length === 0) {
+            roomsList.innerHTML = '';
+            
+            if (!rooms || rooms.length === 0) {
                 roomsList.innerHTML = '<div style="text-align:center; padding:10px; color:#888;">❌ Нет доступных игр</div>';
                 return;
             }
             
-            let html = '';
             rooms.forEach(room => {
-                html += `
-                    <div class="room-item" onclick="joinRoom('${room.name}')">
-                        <div class="room-name">🎮 ${room.name}</div>
-                        <div class="room-players">Игроки: ${room.playerCount}/20</div>
-                    </div>
+                const roomDiv = document.createElement('div');
+                roomDiv.className = 'room-item';
+                roomDiv.onclick = () => joinRoom(room.name);
+                roomDiv.innerHTML = `
+                    <div class="room-name">${room.name}</div>
+                    <div class="room-players">Игроки: ${room.playerCount}/20</div>
                 `;
+                roomsList.appendChild(roomDiv);
             });
-            roomsList.innerHTML = html;
         }
         
         // Присоединение к комнате
-        window.joinRoom = (roomName) => {
+        function joinRoom(roomName) {
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
+            
+            if (!isPhotonConnected) {
+                document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
+                return;
+            }
             
             myName = name;
             myId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
-            photon.opJoinRoom(roomName);
-        };
+            try {
+                photon.opJoinRoom(roomName);
+            } catch (e) {
+                console.error('Join room error:', e);
+                document.getElementById('errorMsg').textContent = 'Ошибка при подключении к комнате';
+            }
+        }
         
         // Создание комнаты
-        document.getElementById('createRoomBtn').onclick = () => {
+        createRoomBtn.onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
+            
+            if (!isPhotonConnected) {
+                document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
+                return;
+            }
             
             myName = name;
             myId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
             const roomName = 'Комната_' + Math.random().toString(36).substr(2, 6).toUpperCase();
-            photon.opCreateRoom(roomName, { maxPlayers: 20, isVisible: true });
+            
+            try {
+                photon.opCreateRoom(roomName, { 
+                    maxPlayers: 20, 
+                    isVisible: true,
+                    isOpen: true
+                });
+                document.getElementById('errorMsg').textContent = 'Создание комнаты...';
+            } catch (e) {
+                console.error('Create room error:', e);
+                document.getElementById('errorMsg').textContent = 'Ошибка при создании комнаты';
+            }
         };
         
         // Поиск комнат
         scanBtn.onclick = () => {
+            if (!isPhotonConnected) {
+                document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
+                return;
+            }
+            
             roomsList.innerHTML = '<div style="text-align:center; padding:10px;">🔍 Поиск комнат...</div>';
-            photon.opFindFriends([]); // Запрашиваем список комнат
-            setTimeout(() => {
-                if (photon) {
-                    photon.opFindFriends([]);
-                }
-            }, 2000);
+            
+            try {
+                photon.opFindFriends([]);
+            } catch (e) {
+                console.error('Scan rooms error:', e);
+                roomsList.innerHTML = '<div style="text-align:center; padding:10px; color:#888;">❌ Ошибка поиска</div>';
+            }
         };
         
         function validateName(name) {
@@ -820,7 +886,8 @@
                 id: myId,
                 name: myName,
                 color: selectedColor,
-                x: 0, y: 0,
+                x: 0,
+                y: 0,
                 lastDir: lastDir,
                 r: 18,
                 actorNr: photon ? photon.myActor().actorNr : 0
@@ -832,7 +899,11 @@
         
         function resetGame() {
             if (photon && photon.myRoom()) {
-                photon.opLeaveRoom();
+                try {
+                    photon.opLeaveRoom();
+                } catch (e) {
+                    console.error('Leave room error:', e);
+                }
             }
             
             playerObstacles = [];
@@ -845,7 +916,7 @@
             player.y = 0;
             lastDir = { x: 0, y: -1 };
             document.getElementById('nameInput').value = 'Player_' + getRandomPlayerNumber();
-            connectionStatus.textContent = '🟡 Отключено';
+            connectionStatus.textContent = isPhotonConnected ? '🟢 Подключено к Photon' : '🟡 Подключение...';
         }
         
         exitBtn.onclick = resetGame;
@@ -870,7 +941,8 @@
                     id: myId,
                     name: myName,
                     color: selectedColor,
-                    x: 0, y: 0,
+                    x: 0,
+                    y: 0,
                     lastDir: lastDir,
                     r: 18,
                     actorNr: photon ? photon.myActor().actorNr : 0
@@ -1304,7 +1376,6 @@
         // Инициализация Photon при загрузке
         window.onload = () => {
             initPhoton();
-            photon.connectToRegionMaster('eu'); // Подключаемся к европейскому региону
         };
         
         loop();
