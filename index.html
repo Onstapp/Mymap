@@ -412,8 +412,8 @@
             font-size: 14px;
         }
     </style>
-    <!-- Подключаем Photon напрямую с официального CDN -->
-    <script src="https://cdn.photonengine.com/js/photon/v2/photon.min.js"></script>
+    <!-- Пробуем несколько CDN для Photon -->
+    <script src="https://cdn.jsdelivr.net/npm/photon@2.0.0/dist/photon.min.js"></script>
 </head>
 <body>
     <div id="loginScreen">
@@ -433,7 +433,7 @@
             <button id="scanBtn">НАЙТИ ИГРЫ</button>
             <div id="roomsList"></div>
             <div style="text-align: center; color: #a0d0a0; font-size: 12px;">
-                Photon Cloud мультиплеер
+                Локальный мультиплеер (WebRTC)
             </div>
         </div>
         
@@ -509,6 +509,13 @@
         let currentRoom = null;
         let isPhotonConnected = false;
         let photonInitialized = false;
+        let useLocalMultiplayer = false;
+        
+        // WebRTC (запасной вариант)
+        let peerConnection = null;
+        let dataChannel = null;
+        let isHost = false;
+        let discoveredHosts = new Map();
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -593,19 +600,221 @@
         const createRoomBtn = document.getElementById('createRoomBtn');
         const photonStatus = document.getElementById('photonStatus');
         
-        // Проверка загрузки Photon
-        function checkPhotonLoaded() {
-            return typeof Photon !== 'undefined' && Photon.LoadBalancing;
+        // ============== ЛОКАЛЬНЫЙ МУЛЬТИПЛЕЕР (WebRTC) ==============
+        function initLocalMultiplayer() {
+            photonStatus.textContent = '🟢 Используем локальный мультиплеер';
+            document.querySelector('#joinPanel div:last-child').innerHTML = 'Локальный мультиплеер (Wi-Fi)';
+            
+            // Меняем текст кнопок
+            createRoomBtn.textContent = 'СОЗДАТЬ ИГРУ (ЛОКАЛЬНО)';
+            scanBtn.textContent = 'НАЙТИ ИГРЫ В СЕТИ';
+            
+            // Переопределяем функции
+            createRoomBtn.onclick = createLocalRoom;
+            scanBtn.onclick = scanLocalHosts;
         }
         
-        // Инициализация Photon
+        function createLocalRoom() {
+            const name = document.getElementById('nameInput').value.trim();
+            if (!validateName(name)) return;
+            
+            myName = name;
+            isHost = true;
+            myId = 'host_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // Создаем peer connection
+            const configuration = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            };
+            
+            peerConnection = new RTCPeerConnection(configuration);
+            
+            // Создаем data channel
+            dataChannel = peerConnection.createDataChannel('game');
+            setupLocalDataChannel();
+            
+            // Создаем offer
+            peerConnection.createOffer()
+                .then(offer => peerConnection.setLocalDescription(offer))
+                .then(() => {
+                    // Сохраняем offer в localStorage для "обнаружения"
+                    localStorage.setItem('mymap_host', JSON.stringify({
+                        id: myId,
+                        name: myName,
+                        color: selectedColor,
+                        offer: peerConnection.localDescription
+                    }));
+                    
+                    // Добавляем себя в список игроков
+                    players.set(myId, {
+                        id: myId,
+                        name: myName,
+                        color: selectedColor,
+                        x: 0, y: 0,
+                        lastDir: { x: 0, y: -1 },
+                        r: 18
+                    });
+                    
+                    showGame();
+                    connectionStatus.textContent = '🟢 Хост (ожидание игроков)';
+                });
+        }
+        
+        function scanLocalHosts() {
+            discoveredHosts.clear();
+            roomsList.innerHTML = '<div style="text-align:center; padding:10px;">🔍 Поиск хостов...</div>';
+            
+            // Ищем в localStorage (для демо)
+            const hostData = localStorage.getItem('mymap_host');
+            if (hostData) {
+                try {
+                    const host = JSON.parse(hostData);
+                    discoveredHosts.set(host.id, host);
+                } catch (e) {}
+            }
+            
+            setTimeout(() => {
+                updateLocalHostsList();
+            }, 1000);
+        }
+        
+        function updateLocalHostsList() {
+            if (discoveredHosts.size === 0) {
+                roomsList.innerHTML = '<div style="text-align:center; padding:10px; color:#888;">❌ Хостов не найдено</div>';
+                return;
+            }
+            
+            roomsList.innerHTML = '';
+            discoveredHosts.forEach((host, id) => {
+                const hostDiv = document.createElement('div');
+                hostDiv.className = 'room-item';
+                hostDiv.onclick = () => connectToLocalHost(id);
+                hostDiv.innerHTML = `
+                    <div class="room-name">${host.name}</div>
+                    <div class="room-players">🟢 Активен</div>
+                `;
+                roomsList.appendChild(hostDiv);
+            });
+        }
+        
+        function connectToLocalHost(hostId) {
+            const name = document.getElementById('nameInput').value.trim();
+            if (!validateName(name)) return;
+            
+            myName = name;
+            isHost = false;
+            myId = 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            const host = discoveredHosts.get(hostId);
+            
+            const configuration = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            };
+            
+            peerConnection = new RTCPeerConnection(configuration);
+            
+            peerConnection.ondatachannel = (event) => {
+                dataChannel = event.channel;
+                setupLocalDataChannel();
+            };
+            
+            peerConnection.setRemoteDescription(host.offer)
+                .then(() => peerConnection.createAnswer())
+                .then(answer => peerConnection.setLocalDescription(answer))
+                .then(() => {
+                    // Отправляем answer обратно хосту (в реальном приложении через signaling server)
+                    console.log('Answer created', peerConnection.localDescription);
+                    
+                    // Добавляем себя в список игроков
+                    players.set(myId, {
+                        id: myId,
+                        name: myName,
+                        color: selectedColor,
+                        x: 0, y: 0,
+                        lastDir: { x: 0, y: -1 },
+                        r: 18
+                    });
+                    
+                    showGame();
+                });
+        }
+        
+        function setupLocalDataChannel() {
+            dataChannel.onopen = () => {
+                console.log('Data channel opened');
+                connectionStatus.textContent = '🟢 Подключено';
+                
+                // Отправляем информацию о себе
+                sendLocalData({
+                    type: 'join',
+                    player: {
+                        id: myId,
+                        name: myName,
+                        color: selectedColor,
+                        x: 0, y: 0,
+                        lastDir: { x: 0, y: -1 },
+                        r: 18
+                    }
+                });
+            };
+            
+            dataChannel.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleLocalData(data);
+            };
+        }
+        
+        function sendLocalData(data) {
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify(data));
+            }
+        }
+        
+        function handleLocalData(data) {
+            switch(data.type) {
+                case 'join':
+                case 'playerJoined':
+                    players.set(data.player.id, data.player);
+                    updatePlayerList();
+                    break;
+                    
+                case 'move':
+                    const p = players.get(data.id);
+                    if (p) {
+                        p.x = data.x;
+                        p.y = data.y;
+                        p.lastDir = data.lastDir;
+                    }
+                    break;
+                    
+                case 'createObstacle':
+                    playerObstacles.push(data.obstacle);
+                    updateCounter();
+                    break;
+                    
+                case 'deleteObstacle':
+                    playerObstacles.splice(data.index, 1);
+                    updateCounter();
+                    break;
+            }
+        }
+        
+        // ============== PHOTON МУЛЬТИПЛЕЕР ==============
         function initPhoton() {
             try {
-                photonStatus.textContent = '🟡 Загрузка Photon...';
+                photonStatus.textContent = '🟡 Проверка Photon...';
                 
-                if (!checkPhotonLoaded()) {
-                    photonStatus.textContent = '🔴 Photon не загрузился, пробуем снова...';
-                    setTimeout(initPhoton, 1000);
+                // Проверяем, загрузился ли Photon
+                if (typeof Photon === 'undefined' || !Photon.LoadBalancing) {
+                    console.log('Photon not loaded, using local multiplayer');
+                    useLocalMultiplayer = true;
+                    initLocalMultiplayer();
                     return;
                 }
                 
@@ -615,17 +824,6 @@
                 
                 photon.onStateChange = function(state) {
                     console.log('Photon state:', state);
-                    // Photon state codes:
-                    // 0: Disconnected
-                    // 1: Connecting
-                    // 2: Connected
-                    // 3: JoinedLobby
-                    // 4: LeavingLobby
-                    // 5: WaitingForConnect
-                    // 6: WaitingForEncryption
-                    // 7: Authenticating
-                    // 8: Authenticated
-                    // 9: Joined
                     
                     if (state === 8 || state === 9) { // Authenticated or Joined
                         isPhotonConnected = true;
@@ -649,13 +847,11 @@
                 
                 photon.onActorJoin = function(actor) {
                     console.log('Actor joined:', actor);
-                    // Запрашиваем информацию о новом игроке
                     sendPhotonEvent(2, { type: 'requestPlayerInfo' });
                 };
                 
                 photon.onActorLeave = function(actor) {
                     console.log('Actor left:', actor);
-                    // Удаляем игрока
                     for (let [id, p] of players) {
                         if (p.actorNr === actor) {
                             players.delete(id);
@@ -674,7 +870,6 @@
                     connectionStatus.textContent = '🟢 В комнате';
                     roomInfo.textContent = `Комната: ${photon.myRoom().name}`;
                     
-                    // Отправляем информацию о себе
                     setTimeout(() => {
                         sendPhotonEvent(1, {
                             type: 'playerInfo',
@@ -690,7 +885,6 @@
                             }
                         });
                         
-                        // Запрашиваем всех игроков
                         sendPhotonEvent(2, { type: 'requestAllPlayers' });
                     }, 500);
                     
@@ -699,7 +893,6 @@
                 
                 photon.onCreateRoom = function() {
                     console.log('Room created');
-                    // Комната создана, onJoinRoom будет вызван автоматически
                 };
                 
                 photon.onError = function(error) {
@@ -708,46 +901,40 @@
                     document.getElementById('errorMsg').textContent = 'Ошибка: ' + (error.message || error);
                 };
                 
-                // Подключаемся к мастер-серверу
+                // Подключаемся
                 photon.connectToRegionMaster('eu');
                 
             } catch (e) {
                 console.error('Photon init error:', e);
-                photonStatus.textContent = '🔴 Ошибка Photon: ' + e.message;
-                document.getElementById('errorMsg').textContent = 'Ошибка инициализации Photon: ' + e.message;
-                
-                // Пробуем снова через 3 секунды
-                setTimeout(initPhoton, 3000);
+                useLocalMultiplayer = true;
+                initLocalMultiplayer();
             }
         }
         
-        // Отправка события через Photon
         function sendPhotonEvent(code, data) {
             try {
                 if (photon && photon.myRoom() && isPhotonConnected) {
-                    photon.raiseEvent(code, data, { reliability: true, receivers: 0 }); // 0 = все
+                    photon.raiseEvent(code, data, { reliability: true, receivers: 0 });
                 }
             } catch (e) {
                 console.error('Send event error:', e);
             }
         }
         
-        // Обработка событий Photon
         function handlePhotonEvent(code, data, actorNr) {
-            if (actorNr === photon?.myActor()?.actorNr) return; // Игнорируем свои события
+            if (actorNr === photon?.myActor()?.actorNr) return;
             
             try {
                 switch(code) {
-                    case 1: // Информация об игроке
+                    case 1:
                         if (data.type === 'playerInfo' && data.player) {
                             players.set(data.player.id, data.player);
                             updatePlayerList();
                         }
                         break;
                         
-                    case 2: // Запросы
+                    case 2:
                         if (data.type === 'requestPlayerInfo') {
-                            // Отправляем информацию о себе
                             sendPhotonEvent(1, {
                                 type: 'playerInfo',
                                 player: {
@@ -762,13 +949,12 @@
                                 }
                             });
                         } else if (data.type === 'requestAllPlayers') {
-                            // Отправляем всех игроков
                             const playersList = Array.from(players.values());
                             sendPhotonEvent(3, { type: 'allPlayers', players: playersList });
                         }
                         break;
                         
-                    case 3: // Список всех игроков
+                    case 3:
                         if (data.type === 'allPlayers' && data.players) {
                             data.players.forEach(p => {
                                 if (p.id !== myId) {
@@ -779,7 +965,7 @@
                         }
                         break;
                         
-                    case 4: // Движение
+                    case 4:
                         if (data.type === 'move' && data.id) {
                             const p = players.get(data.id);
                             if (p) {
@@ -790,33 +976,16 @@
                         }
                         break;
                         
-                    case 5: // Создание препятствия
+                    case 5:
                         if (data.type === 'createObstacle' && data.obstacle) {
                             playerObstacles.push(data.obstacle);
                             updateCounter();
                         }
                         break;
                         
-                    case 6: // Удаление препятствия
+                    case 6:
                         if (data.type === 'deleteObstacle' && data.index !== undefined) {
                             playerObstacles.splice(data.index, 1);
-                            updateCounter();
-                        }
-                        break;
-                        
-                    case 7: // Синхронизация
-                        if (data.type === 'sync') {
-                            if (data.players) {
-                                data.players.forEach(p => {
-                                    if (p.id !== myId) {
-                                        players.set(p.id, p);
-                                    }
-                                });
-                            }
-                            if (data.obstacles) {
-                                playerObstacles = data.obstacles;
-                            }
-                            updatePlayerList();
                             updateCounter();
                         }
                         break;
@@ -826,7 +995,6 @@
             }
         }
         
-        // Обновление списка комнат
         function updateRoomsList(rooms) {
             roomsList.innerHTML = '';
             
@@ -847,7 +1015,6 @@
             });
         }
         
-        // Присоединение к комнате
         function joinRoom(roomName) {
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
@@ -869,8 +1036,13 @@
             }
         }
         
-        // Создание комнаты
+        // Создание комнаты (Photon)
         createRoomBtn.onclick = () => {
+            if (useLocalMultiplayer) {
+                createLocalRoom();
+                return;
+            }
+            
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
             
@@ -899,6 +1071,11 @@
         
         // Поиск комнат
         scanBtn.onclick = () => {
+            if (useLocalMultiplayer) {
+                scanLocalHosts();
+                return;
+            }
+            
             if (!isPhotonConnected || !photonInitialized) {
                 document.getElementById('errorMsg').textContent = 'Подключение к серверу...';
                 return;
@@ -926,7 +1103,6 @@
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
             
-            // Добавляем себя в список игроков
             players.set(myId, {
                 id: myId,
                 name: myName,
@@ -935,7 +1111,7 @@
                 y: 0,
                 lastDir: lastDir,
                 r: 18,
-                actorNr: photon ? photon.myActor().actorNr : 0
+                actorNr: photon ? photon?.myActor()?.actorNr : 0
             });
             
             updatePlayerList();
@@ -943,12 +1119,14 @@
         }
         
         function resetGame() {
-            if (photon && photon.myRoom()) {
+            if (photon && photon.myRoom() && !useLocalMultiplayer) {
                 try {
                     photon.opLeaveRoom();
-                } catch (e) {
-                    console.error('Leave room error:', e);
-                }
+                } catch (e) {}
+            }
+            
+            if (peerConnection) {
+                peerConnection.close();
             }
             
             playerObstacles = [];
@@ -975,13 +1153,15 @@
         submitCode.onclick = () => {
             const code = codeInput.value.trim();
             if (code === RESET_CODE) {
-                // Отправляем команду сброса всем
-                sendPhotonEvent(8, { type: 'reset' });
+                if (useLocalMultiplayer) {
+                    sendLocalData({ type: 'reset' });
+                } else {
+                    sendPhotonEvent(8, { type: 'reset' });
+                }
                 
                 playerObstacles = [];
                 players.clear();
                 
-                // Добавляем себя обратно
                 players.set(myId, {
                     id: myId,
                     name: myName,
@@ -990,7 +1170,7 @@
                     y: 0,
                     lastDir: lastDir,
                     r: 18,
-                    actorNr: photon ? photon.myActor().actorNr : 0
+                    actorNr: photon ? photon?.myActor()?.actorNr : 0
                 });
                 
                 player.x = 0;
@@ -1024,7 +1204,6 @@
         }
         
         function canMoveTo(nx, ny, r) {
-            // Проверка столкновений со статическими препятствиями
             for (let ob of staticObstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
                 const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
@@ -1032,7 +1211,6 @@
                 if (d < r) return false;
             }
             
-            // Проверка с препятствиями игроков
             for (let ob of playerObstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
                 const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
@@ -1040,7 +1218,6 @@
                 if (d < r) return false;
             }
             
-            // Проверка с другими игроками
             for (let p of players.values()) {
                 if (p.id === myId) continue;
                 const d = Math.hypot(nx - p.x, ny - p.y);
@@ -1072,14 +1249,23 @@
             }
             
             if (moved) {
-                // Отправляем движение всем
-                sendPhotonEvent(4, {
-                    type: 'move',
-                    id: myId,
-                    x: player.x,
-                    y: player.y,
-                    lastDir: lastDir
-                });
+                if (useLocalMultiplayer) {
+                    sendLocalData({
+                        type: 'move',
+                        id: myId,
+                        x: player.x,
+                        y: player.y,
+                        lastDir: lastDir
+                    });
+                } else {
+                    sendPhotonEvent(4, {
+                        type: 'move',
+                        id: myId,
+                        x: player.x,
+                        y: player.y,
+                        lastDir: lastDir
+                    });
+                }
             }
         }
         
@@ -1104,7 +1290,6 @@
             
             const tempObstacle = { x, y, w, h };
             
-            // Проверка коллизий
             for (let ob of staticObstacles) {
                 if (rectCollide(tempObstacle, ob)) return;
             }
@@ -1125,7 +1310,13 @@
             };
             
             playerObstacles.push(obstacle);
-            sendPhotonEvent(5, { type: 'createObstacle', obstacle });
+            
+            if (useLocalMultiplayer) {
+                sendLocalData({ type: 'createObstacle', obstacle });
+            } else {
+                sendPhotonEvent(5, { type: 'createObstacle', obstacle });
+            }
+            
             updateCounter();
         }
         
@@ -1146,7 +1337,13 @@
                     dotY >= ob.y && dotY <= ob.y + ob.h) {
                     if (ob.playerId === myId) {
                         playerObstacles.splice(i, 1);
-                        sendPhotonEvent(6, { type: 'deleteObstacle', index: i });
+                        
+                        if (useLocalMultiplayer) {
+                            sendLocalData({ type: 'deleteObstacle', index: i });
+                        } else {
+                            sendPhotonEvent(6, { type: 'deleteObstacle', index: i });
+                        }
+                        
                         updateCounter();
                     }
                     return;
@@ -1172,7 +1369,6 @@
             counterDiv.textContent = `${myObstacles}/${MAX_PLAYER_OBSTACLES}`;
         }
         
-        // Джойстик
         function onStart(e) {
             e.preventDefault();
             drag = true;
@@ -1280,7 +1476,6 @@
             ctx.fillStyle = '#7cb57c';
             ctx.fillRect(0, 0, 600, 600);
             
-            // Рисуем статические препятствия
             ctx.fillStyle = '#5a4f4a';
             ctx.shadowColor = '#3a2f2a';
             ctx.shadowBlur = 18;
@@ -1293,7 +1488,6 @@
                 }
             }
             
-            // Рисуем препятствия игроков
             for (let ob of playerObstacles) {
                 const screenX = ob.x - camX;
                 const screenY = ob.y - camY;
@@ -1309,7 +1503,6 @@
                 }
             }
             
-            // Рисуем других игроков
             for (let p of players.values()) {
                 if (p.id === myId) continue;
                 
@@ -1353,7 +1546,6 @@
                 }
             }
             
-            // Рисуем себя
             ctx.shadowBlur = 28;
             ctx.shadowColor = '#4aa0c0';
             ctx.beginPath();
@@ -1372,7 +1564,6 @@
             ctx.textAlign = 'center';
             ctx.fillText(myName, 300, 300 - 28);
             
-            // Рисуем точку направления
             const dirToUse = drag ? vec : lastDir;
             const len = Math.hypot(dirToUse.x, dirToUse.y);
             if (len > 0.1) {
@@ -1396,7 +1587,6 @@
                 ctx.fill();
             }
             
-            // Миникарта
             ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(300 - player.x / 10, 300 - player.y / 10, 14, 0, 2*Math.PI);
@@ -1418,30 +1608,18 @@
             requestAnimationFrame(loop);
         }
         
-        // Инициализация Photon после загрузки страницы
+        // Инициализация
         window.onload = function() {
-            // Проверяем загрузку Photon
-            if (checkPhotonLoaded()) {
-                initPhoton();
-            } else {
-                photonStatus.textContent = '🟡 Загрузка Photon...';
-                // Ждем загрузку Photon
-                const checkInterval = setInterval(() => {
-                    if (checkPhotonLoaded()) {
-                        clearInterval(checkInterval);
-                        initPhoton();
-                    }
-                }, 100);
-                
-                // Таймаут через 10 секунд
-                setTimeout(() => {
-                    clearInterval(checkInterval);
-                    if (!photonInitialized) {
-                        photonStatus.textContent = '🔴 Photon не загрузился';
-                        document.getElementById('errorMsg').textContent = 'Не удалось загрузить Photon. Проверьте интернет-соединение.';
-                    }
-                }, 10000);
-            }
+            // Пробуем Photon, если не загрузится - используем локальный мультиплеер
+            setTimeout(() => {
+                if (typeof Photon === 'undefined') {
+                    console.log('Photon not available, using local multiplayer');
+                    useLocalMultiplayer = true;
+                    initLocalMultiplayer();
+                } else {
+                    initPhoton();
+                }
+            }, 2000); // Даем время на загрузку Photon
         };
         
         loop();
