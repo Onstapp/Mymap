@@ -18,26 +18,26 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            touch-action: none;
             font-family: monospace;
-            padding: 10px;
         }
         #loginScreen {
             background: #2a3a2a;
-            border-radius: 42px;
-            padding: 30px 20px;
-            box-shadow: 0 20px 30px #000000e0;
+            border-radius: 52px;
+            padding: 40px;
+            box-shadow: 0 35px 50px #000000e0;
             color: #d0e0d0;
-            width: min(400px, 100%);
+            width: min(400px, 90vw);
         }
-        h2 {
+        #loginScreen h2 {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
             font-size: 32px;
             text-shadow: 3px 3px 0 #1a2a1a;
             letter-spacing: 4px;
         }
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         .input-group label {
             display: block;
@@ -63,7 +63,7 @@
         .color-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
+            gap: 10px;
             margin-top: 10px;
         }
         .color-option {
@@ -71,6 +71,7 @@
             border-radius: 15px;
             cursor: pointer;
             border: 3px solid transparent;
+            transition: 0.1s;
         }
         .color-option.selected {
             border-color: white;
@@ -88,169 +89,318 @@
         .color-pink { background: #ff88ff; }
         .color-purple { background: #aa44ff; }
         
-        button {
+        #createRoomBtn {
             width: 100%;
             padding: 18px;
             background: #4a7a4a;
             border: none;
             border-radius: 40px;
             color: #d0e0d0;
-            font-size: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #1a2a1a;
+            margin-top: 20px;
+            transition: 0.05s linear;
+            font-family: monospace;
+        }
+        #createRoomBtn:active {
+            transform: translateY(5px);
+            box-shadow: 0 3px 0 #1a2a1a;
+        }
+        
+        #joinPanel {
+            margin-top: 20px;
+            padding: 20px;
+            background: #1a2a1a;
+            border-radius: 30px;
+            border: 3px solid #7cb57c;
+        }
+        
+        #joinBtn {
+            width: 100%;
+            padding: 15px;
+            background: #4a7a4a;
+            border: none;
+            border-radius: 30px;
+            color: #d0e0d0;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 6px 0 #1a2a1a;
-            margin: 10px 0;
-            font-family: monospace;
-            transition: 0.05s linear;
-        }
-        button:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #1a2a1a;
+            margin-bottom: 15px;
         }
         
-        .panel {
+        #peerIdInput {
+            width: 100%;
+            padding: 15px;
             background: #1a2a1a;
+            border: 3px solid #4a7a4a;
             border-radius: 30px;
-            padding: 20px;
-            margin: 20px 0;
-            border: 2px solid #4a7a4a;
-        }
-        
-        .code-display {
-            font-size: 42px;
-            font-weight: bold;
-            color: #ffffa0;
+            color: #d0e0d0;
+            font-size: 18px;
+            font-family: monospace;
+            outline: none;
             text-align: center;
-            padding: 20px;
-            background: #1a2a1a;
-            border-radius: 20px;
-            margin: 15px 0;
-            letter-spacing: 8px;
-            border: 3px solid #7cb57c;
+            margin-bottom: 10px;
         }
         
         #errorMsg {
             color: #ff8888;
             text-align: center;
+            margin-top: 15px;
             min-height: 25px;
-            margin: 10px 0;
         }
         
-        .status {
-            text-align: center;
+        #connectionStatus {
             color: #a0d0a0;
+            text-align: center;
             font-size: 14px;
-            margin: 10px 0;
+            margin-top: 10px;
         }
         
-        #gameScreen {
+        .game {
             background: #2a3a2a;
             border-radius: 42px;
             padding: 20px;
-            box-shadow: 0 20px 30px #000000e0;
-            width: min(450px, 100%);
+            box-shadow: 0 35px 50px #000000e0;
         }
-        
         .game-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .coords {
+            color: #d0e0d0;
+            font-family: monospace;
+            font-size: 16px;
+            text-align: center;
+            text-shadow: 2px 2px 0 #1a2a1a;
+            letter-spacing: 2px;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .exit-btn, .reset-btn {
+            background: #4a3a3a;
+            color: #ffb0b0;
+            border: none;
+            border-radius: 25px;
+            padding: 5px 25px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #2a1a1a;
+            transition: 0.05s linear;
+            font-family: monospace;
+        }
+        .reset-btn {
+            background: #3a4a3a;
+            color: #b0ffb0;
+            box-shadow: 0 4px 0 #1a2a1a;
+        }
+        .exit-btn:active, .reset-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #2a1a1a;
+        }
+        canvas {
+            display: block;
+            width: min(380px, 80vw);
+            height: min(380px, 80vw);
+            background: #7cb57c;
+            border-radius: 36px;
+            box-shadow: inset 0 0 0 4px #4a7a4a;
+            margin: 0 auto;
+        }
+        .controls {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .room-info {
-            background: #1a2a1a;
-            padding: 8px 15px;
-            border-radius: 25px;
-            color: #ffffa0;
-            font-size: 18px;
-            border: 2px solid #7cb57c;
-        }
-        
-        .exit-btn {
-            background: #4a3a3a;
-            color: #ffb0b0;
-            padding: 8px 20px;
-            font-size: 16px;
-            width: auto;
-            box-shadow: 0 4px 0 #2a1a1a;
-        }
-        
-        canvas {
-            display: block;
-            width: 100%;
-            aspect-ratio: 1;
-            background: #7cb57c;
-            border-radius: 30px;
-            box-shadow: inset 0 0 0 4px #4a7a4a;
-            margin: 10px 0;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 10px;
             margin-top: 15px;
         }
-        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-left: 5px;
+        }
         .action-btn {
-            flex: 1;
-            padding: 15px;
-            background: #3a4a3a;
+            width: min(60px, 13vw);
+            height: min(60px, 13vw);
             border-radius: 25px;
-            box-shadow: 0 5px 0 #1a2a1a;
-            text-align: center;
-            font-size: 24px;
-            color: #ff6b6b;
+            background: #3a4a3a;
+            box-shadow: 0 6px 0 #1a2a1a, inset 0 -3px 8px #5a7a5a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             cursor: pointer;
+            touch-action: none;
+            transition: 0.05s linear;
+            font-size: 28px;
+            color: #ff6b6b;
         }
         .action-btn:active {
-            transform: translateY(3px);
-            box-shadow: 0 2px 0 #1a2a1a;
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #1a2a1a, inset 0 -3px 8px #5a7a5a;
         }
-        
+        .joystick-wrapper {
+            margin-right: 5px;
+        }
         .joystick {
-            flex: 2;
+            width: min(120px, 26vw);
+            height: min(120px, 26vw);
             background: #3a4a3a;
             border-radius: 999px;
-            box-shadow: 0 5px 0 #1a2a1a, inset 0 -2px 8px #5a7a5a;
+            box-shadow: 0 8px 0 #1a2a1a, inset 0 -4px 12px #5a7a5a;
             position: relative;
             touch-action: none;
         }
         .thumb {
             position: absolute;
-            width: 50px;
-            height: 50px;
+            width: 42px;
+            height: 42px;
             background: #7cb57c;
             border-radius: 999px;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 4px 8px #1a2a1a, 0 0 0 3px #4a7a4a;
+            box-shadow: 0 7px 14px #1a2a1a, 0 0 0 4px #4a7a4a;
+            transition: transform 0.02s;
+            will-change: transform;
         }
-        
+        .info-panel {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
         .player-list {
-            color: #d0e0d0;
-            font-size: 14px;
+            color: #a0d0a0;
+            font-size: 11px;
             background: #1a2a1a80;
-            padding: 10px;
-            border-radius: 15px;
-            margin: 10px 0;
-            border: 1px solid #5a7a5a;
+            padding: 5px 8px;
+            border-radius: 8px;
+            max-width: 150px;
+            pointer-events: none;
             backdrop-filter: blur(2px);
+            border: 1px solid #5a7a5a;
         }
-        
         .counter {
             color: #d0e0d0;
-            font-size: 16px;
-            text-align: center;
-            margin: 10px 0;
+            font-size: 12px;
+            font-weight: normal;
+            background: #1a2a1a80;
+            padding: 5px 10px;
+            border: 1px solid #5a7a5a;
+            border-radius: 10px;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+            pointer-events: none;
+            backdrop-filter: blur(2px);
         }
-        
-        .coords {
+        .game-wrapper {
+            position: relative;
+        }
+        .code-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #00000080;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        .code-dialog.hidden {
+            display: none;
+        }
+        .code-box {
+            background: #2a3a2a;
+            padding: 25px;
+            border-radius: 35px;
+            box-shadow: 0 20px 30px #000000;
+            border: 3px solid #5a7a5a;
+            width: min(280px, 75vw);
+        }
+        .code-box h3 {
             color: #d0e0d0;
-            font-size: 14px;
             text-align: center;
-            margin: 5px 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .code-box input {
+            width: 100%;
+            padding: 12px;
+            background: #1a2a1a;
+            border: 3px solid #4a7a4a;
+            border-radius: 25px;
+            color: #d0e0d0;
+            font-size: 20px;
+            font-family: monospace;
+            outline: none;
+            text-align: center;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+        }
+        .code-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .code-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.05s linear;
+            font-family: monospace;
+        }
+        .code-btn.submit {
+            background: #4a7a4a;
+            color: #d0e0d0;
+            box-shadow: 0 4px 0 #1a2a1a;
+        }
+        .code-btn.cancel {
+            background: #4a3a3a;
+            color: #ffb0b0;
+            box-shadow: 0 4px 0 #2a1a1a;
+        }
+        .code-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #1a2a1a;
+        }
+        .connection-status {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            color: #a0d0a0;
+            font-size: 11px;
+            background: #1a2a1a80;
+            padding: 3px 6px;
+            border-radius: 8px;
+        }
+        .room-info {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #ffffa0;
+            font-size: 18px;
+            font-weight: bold;
+            background: #1a2a1a;
+            padding: 8px 20px;
+            border-radius: 30px;
+            border: 2px solid #7cb57c;
         }
     </style>
     <!-- PeerJS -->
@@ -259,55 +409,77 @@
 <body>
     <div id="loginScreen">
         <h2>MYMAP</h2>
-        
         <div class="input-group">
-            <label>ТВОЁ ИМЯ</label>
-            <input type="text" id="nameInput" maxlength="20" value="Игрок">
+            <label>ТВОЁ ИМЯ (3-20 символов)</label>
+            <input type="text" id="nameInput" maxlength="20" placeholder="Игрок">
         </div>
-        
         <div class="input-group">
             <label>ЦВЕТ</label>
             <div class="color-grid" id="colorGrid"></div>
         </div>
+        <button id="createRoomBtn">СОЗДАТЬ ИГРУ</button>
         
-        <div class="panel">
-            <button id="createRoomBtn">🎮 СОЗДАТЬ ИГРУ</button>
-            <div id="hostCode" class="code-display"></div>
-            <div class="status">👉 Покажи этот код другу</div>
-        </div>
-        
-        <div class="panel">
-            <input type="text" id="peerCodeInput" placeholder="Введи код друга" maxlength="10">
-            <button id="connectBtn">🔌 ПОДКЛЮЧИТЬСЯ</button>
+        <div id="joinPanel">
+            <div style="text-align: center; margin-bottom: 15px; color: #ffffa0;">🔑 ПОДКЛЮЧИТЬСЯ ПО КОДУ</div>
+            <input type="text" id="peerIdInput" placeholder="Введи код друга">
+            <button id="joinBtn">ПОДКЛЮЧИТЬСЯ</button>
+            <div id="connectionStatus">🟡 Инициализация PeerJS...</div>
         </div>
         
         <div id="errorMsg"></div>
-        <div class="status" id="connectionStatus">🟢 PeerJS готов</div>
     </div>
 
-    <div id="gameScreen" style="display: none;">
+    <div class="game" id="gameScreen" style="display: none;">
         <div class="game-header">
+            <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
             <div class="room-info" id="roomCodeDisplay"></div>
-            <button class="exit-btn" id="exitBtn">ВЫХОД</button>
-        </div>
-        
-        <canvas id="world" width="600" height="600"></canvas>
-        
-        <div class="coords" id="coordsDisplay">X: 0 | Y: 0</div>
-        
-        <div class="player-list" id="playerList"></div>
-        <div class="counter" id="counter">0/10</div>
-        
-        <div class="controls">
-            <div class="action-btn" id="createBtn">⬤</div>
-            <div class="joystick" id="joystick">
-                <div class="thumb" id="thumb"></div>
+            <div class="header-buttons">
+                <button class="reset-btn" id="resetBtn">СБРОС</button>
+                <button class="exit-btn" id="exitBtn">ВЫХОД</button>
             </div>
-            <div class="action-btn" id="deleteBtn">✕</div>
+        </div>
+        <div class="game-wrapper">
+            <div class="info-panel">
+                <div class="player-list" id="playerList"></div>
+                <div class="counter" id="counter">0/10</div>
+            </div>
+            <canvas id="world" width="600" height="600"></canvas>
+            <div class="connection-status" id="gameConnectionStatus">🟡 Подключение...</div>
+        </div>
+        <div class="controls">
+            <div class="action-buttons">
+                <div class="action-btn" id="deleteBtn">✕</div>
+                <div class="action-btn" id="createBtn">⬤</div>
+            </div>
+            <div class="joystick-wrapper">
+                <div class="joystick" id="joystick">
+                    <div class="thumb" id="thumb"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="code-dialog hidden" id="codeDialog">
+        <div class="code-box">
+            <h3>🔐 ВВЕДИ КОД СБРОСА</h3>
+            <input type="text" id="codeInput" maxlength="7" placeholder="0000000">
+            <div class="code-buttons">
+                <button class="code-btn submit" id="submitCode">OK</button>
+                <button class="code-btn cancel" id="cancelCode">ОТМЕНА</button>
+            </div>
         </div>
     </div>
 
     <script>
+        // Генерируем случайное имя
+        function getRandomPlayerName() {
+            const names = ['Воин', 'Маг', 'Лучник', 'Рыцарь', 'Разбойник', 'Паладин', 'Друид', 'Шаман'];
+            return names[Math.floor(Math.random() * names.length)] + '_' + Math.floor(Math.random() * 1000);
+        }
+        
+        // Устанавливаем имя по умолчанию
+        document.getElementById('nameInput').value = getRandomPlayerName();
+        
         // Цвета
         const colors = [
             'white', 'black', 'red', 'orange', 'yellow',
@@ -319,10 +491,10 @@
         let myName = '';
         let players = new Map();
         let playerObstacles = [];
-        let peer = null;
-        let conn = null;
         let isHost = false;
         let myPeerId = null;
+        let peer = null;
+        let conn = null;
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -338,14 +510,35 @@
             colorGrid.appendChild(div);
         });
         
-        // Статические препятствия
+        const MAX_PLAYER_OBSTACLES = 10;
+        const RESET_CODE = '6787001';
+        
+        // Статические препятствия (как в оригинале)
         const staticObstacles = [];
-        for (let i = 0; i < 80; i++) {
+        const WORLD_SIZE = 2000;
+        const SPAWN_RADIUS = 400;
+        
+        for (let i = 0; i < 150; i++) {
+            let x, y, dist;
+            do {
+                x = (Math.random() - 0.5) * WORLD_SIZE;
+                y = (Math.random() - 0.5) * WORLD_SIZE;
+                dist = Math.hypot(x, y);
+            } while (dist < SPAWN_RADIUS);
+            
+            const shape = Math.floor(Math.random() * 3);
+            let w, h;
+            
+            switch(shape) {
+                case 0: w = h = 30 + Math.random() * 50; break;
+                case 1: w = 50 + Math.random() * 60; h = 25 + Math.random() * 30; break;
+                case 2: w = 25 + Math.random() * 30; h = 50 + Math.random() * 60; break;
+            }
+            
             staticObstacles.push({
-                x: (Math.random() - 0.5) * 1500,
-                y: (Math.random() - 0.5) * 1500,
-                w: 30 + Math.random() * 50,
-                h: 30 + Math.random() * 50
+                x: x - w/2,
+                y: y - h/2,
+                w, h
             });
         }
         
@@ -373,15 +566,18 @@
         const deleteBtn = document.getElementById('deleteBtn');
         const counterDiv = document.getElementById('counter');
         const playerListDiv = document.getElementById('playerList');
+        const gameConnectionStatus = document.getElementById('gameConnectionStatus');
         const exitBtn = document.getElementById('exitBtn');
-        const createRoomBtn = document.getElementById('createRoomBtn');
-        const connectBtn = document.getElementById('connectBtn');
-        const hostCode = document.getElementById('hostCode');
-        const peerCodeInput = document.getElementById('peerCodeInput');
+        const resetBtn = document.getElementById('resetBtn');
+        const codeDialog = document.getElementById('codeDialog');
+        const codeInput = document.getElementById('codeInput');
+        const submitCode = document.getElementById('submitCode');
+        const cancelCode = document.getElementById('cancelCode');
         const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+        const createRoomBtn = document.getElementById('createRoomBtn');
+        const joinBtn = document.getElementById('joinBtn');
+        const peerIdInput = document.getElementById('peerIdInput');
         const connectionStatus = document.getElementById('connectionStatus');
-        
-        const MAX_PLAYER_OBSTACLES = 10;
         
         // ============== PEERJS ИНИЦИАЛИЗАЦИЯ ==============
         function initPeer() {
@@ -396,9 +592,26 @@
                 });
                 
                 peer.on('connection', (connection) => {
-                    console.log('Входящее подключение');
+                    console.log('Входящее подключение от:', connection.peer);
                     conn = connection;
                     setupConnection();
+                    
+                    // Если мы хост, отправляем приветствие
+                    if (isHost) {
+                        setTimeout(() => {
+                            sendData({
+                                type: 'hostInfo',
+                                hostId: myPeerId,
+                                hostName: myName
+                            });
+                        }, 500);
+                    }
+                });
+                
+                peer.on('disconnected', () => {
+                    console.log('Peer disconnected');
+                    connectionStatus.innerHTML = '🟡 PeerJS отключен';
+                    gameConnectionStatus.innerHTML = '🟡 Отключено';
                 });
                 
                 peer.on('error', (error) => {
@@ -412,24 +625,37 @@
             }
         }
         
-        // ============== СОЗДАНИЕ КОМНАТЫ (ХОСТ) ==============
+        // ============== СОЗДАНИЕ ИГРЫ (ХОСТ) ==============
         createRoomBtn.onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
-            if (!name) {
-                document.getElementById('errorMsg').textContent = 'Введите имя';
-                return;
-            }
+            if (!validateName(name)) return;
             
             myName = name;
             isHost = true;
             
-            // Показываем свой Peer ID как код комнаты
-            hostCode.innerHTML = myPeerId || 'Ожидание...';
+            // Ждем получения Peer ID
+            if (!myPeerId) {
+                connectionStatus.innerHTML = '🟡 Ожидание PeerJS...';
+                setTimeout(() => {
+                    if (myPeerId) {
+                        startHostGame();
+                    }
+                }, 1000);
+                return;
+            }
+            
+            startHostGame();
+        };
+        
+        function startHostGame() {
+            myId = myPeerId;
+            
+            // Показываем код комнаты
             roomCodeDisplay.innerHTML = 'Код: ' + myPeerId;
             
             // Добавляем себя в список игроков
-            players.set(myPeerId, {
-                id: myPeerId,
+            players.set(myId, {
+                id: myId,
                 name: myName,
                 color: selectedColor,
                 x: 0, y: 0,
@@ -440,19 +666,17 @@
             
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
+            gameConnectionStatus.innerHTML = '🟢 Хост (ожидание игроков)';
             updatePlayerList();
             updateCounter();
-        };
+        }
         
-        // ============== ПОДКЛЮЧЕНИЕ К КОМНАТЕ ==============
-        connectBtn.onclick = () => {
+        // ============== ПОДКЛЮЧЕНИЕ К ИГРЕ ==============
+        joinBtn.onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
-            const hostId = peerCodeInput.value.trim();
+            const hostId = peerIdInput.value.trim();
             
-            if (!name) {
-                document.getElementById('errorMsg').textContent = 'Введите имя';
-                return;
-            }
+            if (!validateName(name)) return;
             if (!hostId) {
                 document.getElementById('errorMsg').textContent = 'Введите код друга';
                 return;
@@ -461,18 +685,23 @@
             myName = name;
             isHost = false;
             
+            connectionStatus.innerHTML = '🟡 Подключение к ' + hostId + '...';
+            
             // Подключаемся к хосту
             conn = peer.connect(hostId);
             
             conn.on('open', () => {
                 console.log('Подключено к хосту');
-                setupConnection();
+                myId = peer.id; // Используем свой Peer ID как ID игрока
+                
+                gameConnectionStatus.innerHTML = '🟢 Подключено';
+                roomCodeDisplay.innerHTML = 'Код: ' + hostId;
                 
                 // Отправляем информацию о себе
                 sendData({
                     type: 'join',
                     player: {
-                        id: myPeerId,
+                        id: myId,
                         name: myName,
                         color: selectedColor,
                         x: 0, y: 0,
@@ -482,8 +711,8 @@
                 });
                 
                 // Добавляем себя в список игроков
-                players.set(myPeerId, {
-                    id: myPeerId,
+                players.set(myId, {
+                    id: myId,
                     name: myName,
                     color: selectedColor,
                     x: 0, y: 0,
@@ -492,7 +721,6 @@
                     isHost: false
                 });
                 
-                roomCodeDisplay.innerHTML = 'Код: ' + hostId;
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('gameScreen').style.display = 'block';
                 updatePlayerList();
@@ -502,6 +730,11 @@
             conn.on('error', (err) => {
                 console.error('Connection error:', err);
                 document.getElementById('errorMsg').textContent = 'Ошибка подключения';
+                connectionStatus.innerHTML = '🔴 Ошибка подключения';
+            });
+            
+            conn.on('close', () => {
+                gameConnectionStatus.innerHTML = '🔴 Соединение потеряно';
             });
         };
         
@@ -513,7 +746,11 @@
             
             conn.on('close', () => {
                 console.log('Соединение закрыто');
-                connectionStatus.innerHTML = '🔴 Соединение потеряно';
+                gameConnectionStatus.innerHTML = '🔴 Соединение потеряно';
+            });
+            
+            conn.on('error', (err) => {
+                console.error('Connection error:', err);
             });
         }
         
@@ -576,7 +813,7 @@
                 case 'sync':
                     if (data.players) {
                         data.players.forEach(p => {
-                            if (p.id !== myPeerId) {
+                            if (p.id !== myId) {
                                 players.set(p.id, p);
                             }
                         });
@@ -587,36 +824,131 @@
                     updatePlayerList();
                     updateCounter();
                     break;
+                    
+                case 'reset':
+                    if (isHost) {
+                        playerObstacles = [];
+                        players.clear();
+                        
+                        players.set(myId, {
+                            id: myId,
+                            name: myName,
+                            color: selectedColor,
+                            x: 0, y: 0,
+                            lastDir: { x: 0, y: -1 },
+                            r: 18,
+                            isHost: true
+                        });
+                        
+                        player.x = 0;
+                        player.y = 0;
+                        
+                        sendData({
+                            type: 'sync',
+                            players: Array.from(players.values()),
+                            obstacles: []
+                        });
+                        
+                        updatePlayerList();
+                        updateCounter();
+                    }
+                    break;
             }
         }
         
+        // ============== ПРОВЕРКА ИМЕНИ ==============
+        function validateName(name) {
+            if (name.length < 3 || name.length > 20) {
+                document.getElementById('errorMsg').textContent = 'Имя должно быть от 3 до 20 символов';
+                return false;
+            }
+            return true;
+        }
+        
         // ============== ВЫХОД ==============
-        exitBtn.onclick = () => {
+        function resetGame() {
             if (conn) {
                 conn.close();
             }
+            if (peer) {
+                peer.destroy();
+            }
             location.reload();
+        }
+        
+        exitBtn.onclick = resetGame;
+        
+        // ============== СБРОС ПО КОДУ ==============
+        resetBtn.onclick = () => {
+            codeDialog.classList.remove('hidden');
+            codeInput.value = '';
+            codeInput.focus();
         };
         
-        // ============== ИГРОВАЯ ЛОГИКА ==============
+        submitCode.onclick = () => {
+            const code = codeInput.value.trim();
+            if (code === RESET_CODE) {
+                if (isHost) {
+                    sendData({ type: 'reset' });
+                    
+                    playerObstacles = [];
+                    players.clear();
+                    
+                    players.set(myId, {
+                        id: myId,
+                        name: myName,
+                        color: selectedColor,
+                        x: 0, y: 0,
+                        lastDir: { x: 0, y: -1 },
+                        r: 18,
+                        isHost: true
+                    });
+                    
+                    player.x = 0;
+                    player.y = 0;
+                    
+                    updatePlayerList();
+                    updateCounter();
+                } else {
+                    alert('Только хост может сбросить игру!');
+                }
+                codeDialog.classList.add('hidden');
+            } else {
+                alert('Неверный код!');
+                codeInput.value = '';
+            }
+        };
+        
+        cancelCode.onclick = () => {
+            codeDialog.classList.add('hidden');
+        };
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !codeDialog.classList.contains('hidden')) {
+                codeDialog.classList.add('hidden');
+            }
+        });
+        
+        // ============== ИГРОВАЯ ЛОГИКА (как в оригинале) ==============
         function updatePlayerList() {
             const list = Array.from(players.values())
-                .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}${p.id === myPeerId ? ' (вы)' : ''}${p.isHost ? ' 👑' : ''}`)
+                .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}${p.id === myId ? ' (вы)' : ''}${p.isHost ? ' 👑' : ''}`)
                 .join('<br>');
             playerListDiv.innerHTML = `👥 Игроки (${players.size}):<br>${list}`;
         }
         
         function updateCounter() {
-            const myObstacles = playerObstacles.filter(o => o.playerId === myPeerId).length;
-            counterDiv.innerHTML = `⬤ ${myObstacles}/${MAX_PLAYER_OBSTACLES}`;
+            const myObstacles = playerObstacles.filter(o => o.playerId === myId).length;
+            counterDiv.textContent = `${myObstacles}/${MAX_PLAYER_OBSTACLES}`;
         }
         
         function updateCoords() {
-            coordsDiv.textContent = `X: ${Math.round(player.x)} | Y: ${Math.round(player.y)}`;
+            const x = Math.round(player.x);
+            const y = Math.round(player.y);
+            coordsDiv.textContent = `X: ${x}  |  Y: ${y}`;
         }
         
         function canMoveTo(nx, ny, r) {
-            // Статические препятствия
             for (let ob of staticObstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
                 const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
@@ -624,7 +956,6 @@
                 if (d < r) return false;
             }
             
-            // Препятствия игроков
             for (let ob of playerObstacles) {
                 const nearX = Math.max(ob.x, Math.min(nx, ob.x + ob.w));
                 const nearY = Math.max(ob.y, Math.min(ny, ob.y + ob.h));
@@ -632,11 +963,10 @@
                 if (d < r) return false;
             }
             
-            // Другие игроки
             for (let p of players.values()) {
-                if (p.id === myPeerId) continue;
+                if (p.id === myId) continue;
                 const d = Math.hypot(nx - p.x, ny - p.y);
-                if (d < r + 18) return false;
+                if (d < r + (p.r || 18)) return false;
             }
             
             return true;
@@ -656,6 +986,7 @@
                     player.x += dx;
                     moved = true;
                 }
+                
                 if (canMoveTo(player.x, player.y + dy, player.r)) {
                     player.y += dy;
                     moved = true;
@@ -665,7 +996,7 @@
             if (moved) {
                 sendData({
                     type: 'move',
-                    id: myPeerId,
+                    id: myId,
                     x: player.x,
                     y: player.y,
                     lastDir: lastDir
@@ -674,7 +1005,7 @@
         }
         
         function createObstacle() {
-            const myObstacles = playerObstacles.filter(o => o.playerId === myPeerId).length;
+            const myObstacles = playerObstacles.filter(o => o.playerId === myId).length;
             if (myObstacles >= MAX_PLAYER_OBSTACLES) return;
             
             const len = Math.hypot(lastDir.x, lastDir.y);
@@ -683,16 +1014,34 @@
             const dirX = lastDir.x / len;
             const dirY = lastDir.y / len;
             
-            const newX = player.x + dirX * 50;
-            const newY = player.y + dirY * 50;
+            const createDist = player.r + 40;
+            const newX = player.x + dirX * createDist;
+            const newY = player.y + dirY * createDist;
+            
+            const w = 44;
+            const h = 44;
+            const x = newX - w/2;
+            const y = newY - h/2;
+            
+            const tempObstacle = { x, y, w, h };
+            
+            for (let ob of staticObstacles) {
+                if (rectCollide(tempObstacle, ob)) return;
+            }
+            
+            for (let ob of playerObstacles) {
+                if (rectCollide(tempObstacle, ob)) return;
+            }
+            
+            for (let p of players.values()) {
+                const d = Math.hypot(newX - p.x, newY - p.y);
+                if (d < player.r + w/2) return;
+            }
             
             const obstacle = {
-                playerId: myPeerId,
+                playerId: myId,
                 playerColor: selectedColor,
-                x: newX - 20,
-                y: newY - 20,
-                w: 40,
-                h: 40
+                x, y, w, h
             };
             
             playerObstacles.push(obstacle);
@@ -700,15 +1049,36 @@
             updateCounter();
         }
         
-        function deleteObstacle() {
-            for (let i = playerObstacles.length - 1; i >= 0; i--) {
-                if (playerObstacles[i].playerId === myPeerId) {
-                    playerObstacles.splice(i, 1);
-                    sendData({ type: 'deleteObstacle', index: i });
-                    updateCounter();
+        function deleteObstacleAtDot() {
+            const len = Math.hypot(lastDir.x, lastDir.y);
+            if (len < 0.1) return;
+            
+            const dirX = lastDir.x / len;
+            const dirY = lastDir.y / len;
+            
+            const dotDist = 12 + 25;
+            const dotX = player.x + dirX * (player.r + dotDist);
+            const dotY = player.y + dirY * (player.r + dotDist);
+            
+            for (let i = 0; i < playerObstacles.length; i++) {
+                const ob = playerObstacles[i];
+                if (dotX >= ob.x && dotX <= ob.x + ob.w &&
+                    dotY >= ob.y && dotY <= ob.y + ob.h) {
+                    if (ob.playerId === myId) {
+                        playerObstacles.splice(i, 1);
+                        sendData({ type: 'deleteObstacle', index: i });
+                        updateCounter();
+                    }
                     return;
                 }
             }
+        }
+        
+        function rectCollide(r1, r2) {
+            return !(r2.x >= r1.x + r1.w ||
+                     r2.x + r2.w <= r1.x ||
+                     r2.y >= r1.y + r1.h ||
+                     r2.y + r2.h <= r1.y);
         }
         
         // ============== ДЖОЙСТИК ==============
@@ -765,7 +1135,6 @@
             vec.y = 0;
         }
         
-        // ============== ОБРАБОТЧИКИ ==============
         createBtn.addEventListener('mousedown', (e) => {
             e.preventDefault();
             createObstacle();
@@ -777,11 +1146,11 @@
         
         deleteBtn.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            deleteObstacle();
+            deleteObstacleAtDot();
         });
         deleteBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            deleteObstacle();
+            deleteObstacleAtDot();
         });
         
         joyDiv.addEventListener('mousedown', onStart);
@@ -793,103 +1162,137 @@
         joyDiv.addEventListener('touchmove', onMove, { passive: false });
         joyDiv.addEventListener('touchend', onEnd);
         joyDiv.addEventListener('touchcancel', onEnd);
+        joyDiv.addEventListener('contextmenu', e => e.preventDefault());
         
         function getColor(colorName) {
-            const colors = {
-                'white': '#ffffff', 'black': '#222222', 'red': '#ff4444',
-                'orange': '#ff8844', 'yellow': '#ffff44', 'green': '#44ff44',
-                'cyan': '#44ffff', 'blue': '#4444ff', 'pink': '#ff88ff',
-                'purple': '#aa44ff'
-            };
-            return colors[colorName] || '#7fd4ff';
+            switch(colorName) {
+                case 'white': return '#ffffff';
+                case 'black': return '#222222';
+                case 'red': return '#ff4444';
+                case 'orange': return '#ff8844';
+                case 'yellow': return '#ffff44';
+                case 'green': return '#44ff44';
+                case 'cyan': return '#44ffff';
+                case 'blue': return '#4444ff';
+                case 'pink': return '#ff88ff';
+                case 'purple': return '#aa44ff';
+                default: return '#7fd4ff';
+            }
         }
         
-        // ============== РИСОВАНИЕ ==============
+        // ============== РИСОВАНИЕ (как в оригинале) ==============
         function draw() {
             ctx.clearRect(0, 0, 600, 600);
             
             const camX = player.x - 300;
             const camY = player.y - 300;
             
-            // Статические препятствия
+            ctx.fillStyle = '#7cb57c';
+            ctx.fillRect(0, 0, 600, 600);
+            
             ctx.fillStyle = '#5a4f4a';
             ctx.shadowColor = '#3a2f2a';
-            ctx.shadowBlur = 15;
+            ctx.shadowBlur = 18;
             
-            staticObstacles.forEach(ob => {
-                const x = ob.x - camX;
-                const y = ob.y - camY;
-                if (x > -100 && x < 700 && y > -100 && y < 700) {
-                    ctx.fillRect(x, y, ob.w, ob.h);
+            for (let ob of staticObstacles) {
+                const screenX = ob.x - camX;
+                const screenY = ob.y - camY;
+                if (screenX + ob.w > -50 && screenX < 650 && screenY + ob.h > -50 && screenY < 650) {
+                    ctx.fillRect(screenX, screenY, ob.w, ob.h);
                 }
-            });
+            }
             
-            // Препятствия игроков
-            playerObstacles.forEach(ob => {
-                const x = ob.x - camX;
-                const y = ob.y - camY;
-                if (x > -100 && x < 700 && y > -100 && y < 700) {
+            for (let ob of playerObstacles) {
+                const screenX = ob.x - camX;
+                const screenY = ob.y - camY;
+                if (screenX + ob.w > -50 && screenX < 650 && screenY + ob.h > -50 && screenY < 650) {
                     ctx.shadowColor = '#2a7080';
                     ctx.beginPath();
-                    ctx.arc(x + ob.w/2, y + ob.h/2, ob.w/2, 0, Math.PI*2);
+                    ctx.arc(screenX + ob.w/2, screenY + ob.h/2, ob.w/2, 0, Math.PI*2);
                     ctx.fillStyle = getColor(ob.playerColor);
                     ctx.fill();
                     ctx.strokeStyle = '#3f7080';
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
-            });
+            }
             
-            // Другие игроки
-            players.forEach(p => {
-                if (p.id === myPeerId) return;
+            for (let p of players.values()) {
+                if (p.id === myId) continue;
                 
-                const x = 300 + (p.x - player.x);
-                const y = 300 + (p.y - player.y);
+                const screenX = 300 + (p.x - player.x);
+                const screenY = 300 + (p.y - player.y);
                 
-                if (x > -50 && x < 650 && y > -50 && y < 650) {
-                    ctx.shadowBlur = 20;
+                if (screenX > -50 && screenX < 650 && screenY > -50 && screenY < 650) {
+                    ctx.shadowBlur = 28;
                     ctx.shadowColor = '#4aa0c0';
                     ctx.beginPath();
-                    ctx.arc(x, y, 18, 0, Math.PI*2);
+                    ctx.arc(screenX, screenY, p.r || 18, 0, Math.PI*2);
                     ctx.fillStyle = getColor(p.color);
                     ctx.fill();
-                    ctx.strokeStyle = 'white';
+                    ctx.shadowBlur = 10;
+                    ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 3;
                     ctx.stroke();
                     
                     ctx.shadowBlur = 4;
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 12px monospace';
+                    ctx.shadowColor = '#000000';
+                    ctx.font = 'bold 14px monospace';
+                    ctx.fillStyle = '#ffffff';
                     ctx.textAlign = 'center';
-                    ctx.fillText(p.name, x, y - 25);
+                    ctx.fillText(p.name, screenX, screenY - 28);
+                    
+                    if (p.lastDir) {
+                        const len = Math.hypot(p.lastDir.x, p.lastDir.y);
+                        if (len > 0.1) {
+                            const dirX = p.lastDir.x / len;
+                            const dirY = p.lastDir.y / len;
+                            const dotX = screenX + dirX * 30;
+                            const dotY = screenY + dirY * 30;
+                            
+                            ctx.shadowBlur = 0;
+                            ctx.beginPath();
+                            ctx.arc(dotX, dotY, 5, 0, Math.PI*2);
+                            ctx.fillStyle = '#6a6a6a';
+                            ctx.fill();
+                        }
+                    }
                 }
-            });
+            }
             
-            // Я
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 28;
             ctx.shadowColor = '#4aa0c0';
             ctx.beginPath();
-            ctx.arc(300, 300, 18, 0, Math.PI*2);
+            ctx.arc(300, 300, player.r, 0, Math.PI*2);
             ctx.fillStyle = getColor(selectedColor);
             ctx.fill();
-            ctx.strokeStyle = 'white';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 3;
             ctx.stroke();
             
             ctx.shadowBlur = 4;
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 12px monospace';
+            ctx.shadowColor = '#000000';
+            ctx.font = 'bold 14px monospace';
+            ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
-            ctx.fillText(myName + (isHost ? ' 👑' : ''), 300, 275);
+            ctx.fillText(myName + (isHost ? ' 👑' : ''), 300, 300 - 28);
             
-            // Точка направления
-            const len = Math.hypot(lastDir.x, lastDir.y);
+            const dirToUse = drag ? vec : lastDir;
+            const len = Math.hypot(dirToUse.x, dirToUse.y);
             if (len > 0.1) {
-                const dirX = lastDir.x / len;
-                const dirY = lastDir.y / len;
-                const dotX = 300 + dirX * 45;
-                const dotY = 300 + dirY * 45;
+                const dirX = dirToUse.x / len;
+                const dirY = dirToUse.y / len;
+                
+                let distFromPlayer;
+                if (drag) {
+                    distFromPlayer = 12 + (len * 25);
+                } else {
+                    distFromPlayer = 12 + 25;
+                }
+                
+                const dotX = 300 + dirX * (player.r + distFromPlayer);
+                const dotY = 300 + dirY * (player.r + distFromPlayer);
                 
                 ctx.shadowBlur = 0;
                 ctx.beginPath();
@@ -899,6 +1302,15 @@
             }
             
             ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(300 - player.x / 10, 300 - player.y / 10, 14, 0, 2*Math.PI);
+            ctx.fillStyle = '#ffffff60';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffffa0';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            updatePlayerList();
         }
         
         function gameLoop() {
