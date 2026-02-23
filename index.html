@@ -128,7 +128,7 @@
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 6px 0 #1a2a1a;
-            margin-bottom: 15px;
+            margin: 10px 0;
         }
         
         #peerIdInput {
@@ -142,7 +142,6 @@
             font-family: monospace;
             outline: none;
             text-align: center;
-            margin-bottom: 10px;
         }
         
         #errorMsg {
@@ -157,6 +156,10 @@
             text-align: center;
             font-size: 14px;
             margin-top: 10px;
+            padding: 10px;
+            background: #1a2a1a;
+            border-radius: 20px;
+            border: 1px solid #4a7a4a;
         }
         
         .game {
@@ -402,30 +405,69 @@
             border-radius: 30px;
             border: 2px solid #7cb57c;
         }
+        .peer-id-box {
+            background: #1a2a1a;
+            border: 3px solid #7cb57c;
+            border-radius: 30px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .peer-id-label {
+            color: #a0d0a0;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .peer-id-value {
+            color: #ffffa0;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            word-break: break-all;
+        }
+        .copy-btn {
+            background: #4a7a4a;
+            border: none;
+            border-radius: 20px;
+            color: white;
+            padding: 8px 20px;
+            margin-top: 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
     </style>
-    <!-- PeerJS -->
+    <!-- PeerJS с явным указанием сервера -->
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
     <div id="loginScreen">
         <h2>MYMAP</h2>
+        
+        <div class="peer-id-box" id="peerIdBox">
+            <div class="peer-id-label">ТВОЙ УНИКАЛЬНЫЙ КОД:</div>
+            <div class="peer-id-value" id="peerIdDisplay">⏳ Загрузка...</div>
+            <button class="copy-btn" id="copyPeerId">📋 КОПИРОВАТЬ</button>
+        </div>
+        
         <div class="input-group">
             <label>ТВОЁ ИМЯ (3-20 символов)</label>
             <input type="text" id="nameInput" maxlength="20" placeholder="Игрок">
         </div>
+        
         <div class="input-group">
             <label>ЦВЕТ</label>
             <div class="color-grid" id="colorGrid"></div>
         </div>
-        <button id="createRoomBtn">СОЗДАТЬ ИГРУ</button>
+        
+        <button id="createRoomBtn">🎮 НАЧАТЬ ИГРУ (ХОСТ)</button>
         
         <div id="joinPanel">
-            <div style="text-align: center; margin-bottom: 15px; color: #ffffa0;">🔑 ПОДКЛЮЧИТЬСЯ ПО КОДУ</div>
+            <div style="text-align: center; margin-bottom: 15px; color: #ffffa0;">🔑 ПОДКЛЮЧИТЬСЯ К ДРУГУ</div>
             <input type="text" id="peerIdInput" placeholder="Введи код друга">
-            <button id="joinBtn">ПОДКЛЮЧИТЬСЯ</button>
-            <div id="connectionStatus">🟡 Инициализация PeerJS...</div>
+            <button id="joinBtn">🔌 ПОДКЛЮЧИТЬСЯ</button>
         </div>
         
+        <div id="connectionStatus">🟡 Инициализация PeerJS...</div>
         <div id="errorMsg"></div>
     </div>
 
@@ -495,6 +537,7 @@
         let myPeerId = null;
         let peer = null;
         let conn = null;
+        let peerInitialized = false;
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -513,7 +556,7 @@
         const MAX_PLAYER_OBSTACLES = 10;
         const RESET_CODE = '6787001';
         
-        // Статические препятствия (как в оригинале)
+        // Статические препятствия
         const staticObstacles = [];
         const WORLD_SIZE = 2000;
         const SPAWN_RADIUS = 400;
@@ -578,17 +621,33 @@
         const joinBtn = document.getElementById('joinBtn');
         const peerIdInput = document.getElementById('peerIdInput');
         const connectionStatus = document.getElementById('connectionStatus');
+        const peerIdDisplay = document.getElementById('peerIdDisplay');
+        const copyPeerId = document.getElementById('copyPeerId');
         
         // ============== PEERJS ИНИЦИАЛИЗАЦИЯ ==============
         function initPeer() {
             try {
-                // Создаем Peer с случайным ID
-                peer = new Peer();
+                connectionStatus.innerHTML = '🟡 Подключение к PeerJS серверу...';
+                
+                // Создаем Peer с явной конфигурацией
+                peer = new Peer({
+                    config: {
+                        'iceServers': [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun2.l.google.com:19302' },
+                            { urls: 'stun:stun3.l.google.com:19302' },
+                            { urls: 'stun:stun4.l.google.com:19302' }
+                        ]
+                    }
+                });
                 
                 peer.on('open', (id) => {
                     myPeerId = id;
-                    console.log('PeerJS ID:', id);
-                    connectionStatus.innerHTML = '🟢 PeerJS готов<br>Твой ID: ' + id;
+                    peerInitialized = true;
+                    console.log('PeerJS готов, ID:', id);
+                    peerIdDisplay.innerHTML = id;
+                    connectionStatus.innerHTML = '🟢 PeerJS готов!<br>Твой код: <b>' + id + '</b>';
                 });
                 
                 peer.on('connection', (connection) => {
@@ -596,58 +655,79 @@
                     conn = connection;
                     setupConnection();
                     
-                    // Если мы хост, отправляем приветствие
-                    if (isHost) {
-                        setTimeout(() => {
-                            sendData({
-                                type: 'hostInfo',
-                                hostId: myPeerId,
-                                hostName: myName
-                            });
-                        }, 500);
-                    }
+                    conn.on('open', () => {
+                        console.log('Соединение установлено');
+                        gameConnectionStatus.innerHTML = '🟢 Игрок подключился';
+                        
+                        // Если мы хост, отправляем приветствие
+                        if (isHost) {
+                            setTimeout(() => {
+                                sendData({
+                                    type: 'hostInfo',
+                                    hostId: myPeerId,
+                                    hostName: myName
+                                });
+                            }, 500);
+                        }
+                    });
                 });
                 
                 peer.on('disconnected', () => {
-                    console.log('Peer disconnected');
-                    connectionStatus.innerHTML = '🟡 PeerJS отключен';
-                    gameConnectionStatus.innerHTML = '🟡 Отключено';
+                    console.log('Peer отключен');
+                    connectionStatus.innerHTML = '🟡 PeerJS отключен. Переподключение...';
+                    peerInitialized = false;
+                    
+                    // Пытаемся переподключиться
+                    setTimeout(() => {
+                        if (peer && !peer.open) {
+                            peer.reconnect();
+                        }
+                    }, 3000);
                 });
                 
                 peer.on('error', (error) => {
-                    console.error('PeerJS error:', error);
-                    connectionStatus.innerHTML = '🔴 Ошибка: ' + error.type;
+                    console.error('PeerJS ошибка:', error);
+                    
+                    if (error.type === 'peer-unavailable') {
+                        connectionStatus.innerHTML = '🔴 Игрок с таким кодом не найден';
+                        document.getElementById('errorMsg').textContent = 'Проверьте код и повторите';
+                    } else if (error.type === 'network') {
+                        connectionStatus.innerHTML = '🔴 Ошибка сети. Проверьте подключение';
+                    } else {
+                        connectionStatus.innerHTML = '🔴 Ошибка: ' + error.type;
+                    }
                 });
                 
             } catch (e) {
-                console.error('Init error:', e);
+                console.error('Ошибка инициализации:', e);
                 connectionStatus.innerHTML = '🔴 Ошибка инициализации';
             }
         }
+        
+        // ============== КОПИРОВАНИЕ ID ==============
+        copyPeerId.onclick = () => {
+            if (myPeerId) {
+                navigator.clipboard.writeText(myPeerId).then(() => {
+                    copyPeerId.innerHTML = '✅ СКОПИРОВАНО!';
+                    setTimeout(() => {
+                        copyPeerId.innerHTML = '📋 КОПИРОВАТЬ';
+                    }, 2000);
+                });
+            }
+        };
         
         // ============== СОЗДАНИЕ ИГРЫ (ХОСТ) ==============
         createRoomBtn.onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
             if (!validateName(name)) return;
             
-            myName = name;
-            isHost = true;
-            
-            // Ждем получения Peer ID
-            if (!myPeerId) {
-                connectionStatus.innerHTML = '🟡 Ожидание PeerJS...';
-                setTimeout(() => {
-                    if (myPeerId) {
-                        startHostGame();
-                    }
-                }, 1000);
+            if (!peerInitialized) {
+                connectionStatus.innerHTML = '🟡 Ожидание инициализации PeerJS...';
                 return;
             }
             
-            startHostGame();
-        };
-        
-        function startHostGame() {
+            myName = name;
+            isHost = true;
             myId = myPeerId;
             
             // Показываем код комнаты
@@ -669,7 +749,7 @@
             gameConnectionStatus.innerHTML = '🟢 Хост (ожидание игроков)';
             updatePlayerList();
             updateCounter();
-        }
+        };
         
         // ============== ПОДКЛЮЧЕНИЕ К ИГРЕ ==============
         joinBtn.onclick = () => {
@@ -682,17 +762,31 @@
                 return;
             }
             
+            if (!peerInitialized) {
+                connectionStatus.innerHTML = '🟡 Ожидание инициализации PeerJS...';
+                return;
+            }
+            
+            if (hostId === myPeerId) {
+                document.getElementById('errorMsg').textContent = 'Нельзя подключиться к самому себе';
+                return;
+            }
+            
             myName = name;
             isHost = false;
             
             connectionStatus.innerHTML = '🟡 Подключение к ' + hostId + '...';
+            gameConnectionStatus.innerHTML = '🟡 Подключение...';
             
             // Подключаемся к хосту
-            conn = peer.connect(hostId);
+            conn = peer.connect(hostId, {
+                reliable: true,
+                serialization: 'json'
+            });
             
             conn.on('open', () => {
                 console.log('Подключено к хосту');
-                myId = peer.id; // Используем свой Peer ID как ID игрока
+                myId = peer.id;
                 
                 gameConnectionStatus.innerHTML = '🟢 Подключено';
                 roomCodeDisplay.innerHTML = 'Код: ' + hostId;
@@ -728,9 +822,10 @@
             });
             
             conn.on('error', (err) => {
-                console.error('Connection error:', err);
+                console.error('Ошибка подключения:', err);
                 document.getElementById('errorMsg').textContent = 'Ошибка подключения';
-                connectionStatus.innerHTML = '🔴 Ошибка подключения';
+                connectionStatus.innerHTML = '🔴 Не удалось подключиться';
+                gameConnectionStatus.innerHTML = '🔴 Ошибка';
             });
             
             conn.on('close', () => {
@@ -750,7 +845,7 @@
             });
             
             conn.on('error', (err) => {
-                console.error('Connection error:', err);
+                console.error('Ошибка соединения:', err);
             });
         }
         
@@ -929,7 +1024,7 @@
             }
         });
         
-        // ============== ИГРОВАЯ ЛОГИКА (как в оригинале) ==============
+        // ============== ИГРОВАЯ ЛОГИКА ==============
         function updatePlayerList() {
             const list = Array.from(players.values())
                 .map(p => `<span style="color: ${getColor(p.color)}">●</span> ${p.name}${p.id === myId ? ' (вы)' : ''}${p.isHost ? ' 👑' : ''}`)
@@ -1180,7 +1275,7 @@
             }
         }
         
-        // ============== РИСОВАНИЕ (как в оригинале) ==============
+        // ============== РИСОВАНИЕ ==============
         function draw() {
             ctx.clearRect(0, 0, 600, 600);
             
@@ -1322,8 +1417,11 @@
             requestAnimationFrame(gameLoop);
         }
         
-        // Инициализация
-        initPeer();
+        // Запускаем инициализацию после загрузки страницы
+        window.onload = function() {
+            initPeer();
+        };
+        
         gameLoop();
     </script>
 </body>
