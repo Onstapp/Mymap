@@ -4,238 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mymap</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            background: #1a2a1a;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: monospace;
-            touch-action: none;
-        }
-        #menu {
-            background: #2a3a2a;
-            border-radius: 52px;
-            padding: 30px;
-            color: #d0e0d0;
-            width: min(400px, 90vw);
-            text-align: center;
-        }
-        h1 {
-            font-size: 32px;
-            margin-bottom: 30px;
-        }
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 18px;
-            margin: 10px 0;
-            background: #4a7a4a;
-            border: none;
-            border-radius: 40px;
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 8px 0 #1a2a1a;
-        }
-        .btn:active {
-            transform: translateY(5px);
-            box-shadow: 0 3px 0 #1a2a1a;
-        }
-        #code {
-            font-size: 32px;
-            font-weight: bold;
-            color: #ffffa0;
-            background: #1a2a1a;
-            padding: 15px;
-            border-radius: 30px;
-            margin: 15px 0;
-            letter-spacing: 5px;
-        }
-        #game {
-            display: none;
-        }
-        canvas {
-            display: block;
-            width: min(380px, 80vw);
-            height: min(380px, 80vw);
-            background: #7cb57c;
-            border-radius: 36px;
-            margin: 10px auto;
-        }
-    </style>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="menu">
         <h1>🎮 MYMAP</h1>
-        <button class="btn" onclick="createGame()">🔵 СОЗДАТЬ ИГРУ</button>
-        <button class="btn" onclick="joinGame()">🟢 ПРИСОЕДИНИТЬСЯ</button>
+        <input type="text" id="name" placeholder="Твое имя" value="Player_001">
+        <button onclick="createGame()">🔵 СОЗДАТЬ ИГРУ</button>
+        <button onclick="joinGame()">🟢 ПРИСОЕДИНИТЬСЯ</button>
         <div id="code"></div>
         <div id="game">
             <canvas id="canvas" width="600" height="600"></canvas>
-            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-                <button class="btn" style="width: 45%;" onclick="placeBlock()">➕</button>
-                <button class="btn" style="width: 45%;" onclick="exit()">✕</button>
+            <div class="controls">
+                <button onclick="placeBlock()">➕</button>
+                <button onclick="exit()">✕</button>
             </div>
         </div>
     </div>
-
-    <script>
-        let peer = null;
-        let conn = null;
-        let isHost = false;
-        let myX = 0, myY = 0;
-        let otherX = 0, otherY = 0;
-        let blocks = [];
-        let ctx = document.getElementById('canvas').getContext('2d');
-
-        // Создать игру
-        function createGame() {
-            isHost = true;
-            let roomId = Math.floor(1000 + Math.random() * 9000).toString();
-            
-            peer = new Peer(roomId);
-            
-            peer.on('open', () => {
-                document.getElementById('code').innerHTML = 'КОД: ' + roomId;
-                document.getElementById('game').style.display = 'block';
-                
-                peer.on('connection', (c) => {
-                    conn = c;
-                    conn.on('data', (data) => {
-                        if (data.type === 'move') {
-                            otherX = data.x;
-                            otherY = data.y;
-                        }
-                        if (data.type === 'block') {
-                            blocks.push({x: data.x, y: data.y, owner: 'other'});
-                        }
-                    });
-                });
-                
-                gameLoop();
-            });
-        }
-
-        // Присоединиться
-        function joinGame() {
-            let roomId = prompt('Введи код комнаты:');
-            if (!roomId) return;
-            
-            peer = new Peer();
-            
-            peer.on('open', () => {
-                conn = peer.connect(roomId);
-                
-                conn.on('open', () => {
-                    document.getElementById('game').style.display = 'block';
-                    
-                    conn.on('data', (data) => {
-                        if (data.type === 'move') {
-                            otherX = data.x;
-                            otherY = data.y;
-                        }
-                        if (data.type === 'block') {
-                            blocks.push({x: data.x, y: data.y, owner: 'other'});
-                        }
-                    });
-                    
-                    gameLoop();
-                });
-            });
-        }
-
-        // Управление с клавиш (для телефона не нужно, но оставим)
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp') myY -= 10;
-            if (e.key === 'ArrowDown') myY += 10;
-            if (e.key === 'ArrowLeft') myX -= 10;
-            if (e.key === 'ArrowRight') myX += 10;
-            sendMove();
-        });
-
-        // Отправка позиции
-        function sendMove() {
-            if (conn) {
-                conn.send({type: 'move', x: myX, y: myY});
-            }
-        }
-
-        // Поставить блок
-        function placeBlock() {
-            if (conn) {
-                blocks.push({x: myX, y: myY, owner: 'me'});
-                conn.send({type: 'block', x: myX, y: myY});
-            }
-        }
-
-        // Выход
-        function exit() {
-            location.reload();
-        }
-
-        // Игровой цикл
-        function gameLoop() {
-            ctx.clearRect(0, 0, 600, 600);
-            
-            // Фон
-            ctx.fillStyle = '#7cb57c';
-            ctx.fillRect(0, 0, 600, 600);
-            
-            // Блоки
-            blocks.forEach(b => {
-                ctx.fillStyle = b.owner === 'me' ? '#7fd4ff' : '#ff7f7f';
-                ctx.beginPath();
-                ctx.arc(300 + (b.x - myX), 300 + (b.y - myY), 20, 0, Math.PI*2);
-                ctx.fill();
-            });
-            
-            // Другой игрок
-            ctx.fillStyle = '#ff7f7f';
-            ctx.beginPath();
-            ctx.arc(300 + (otherX - myX), 300 + (otherY - myY), 25, 0, Math.PI*2);
-            ctx.fill();
-            
-            // Я
-            ctx.fillStyle = '#7fd4ff';
-            ctx.beginPath();
-            ctx.arc(300, 300, 25, 0, Math.PI*2);
-            ctx.fill();
-            
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Управление пальцем
-        let touchStart = null;
-        document.addEventListener('touchstart', (e) => {
-            touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-        });
-        
-        document.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (touchStart) {
-                let dx = (e.touches[0].clientX - touchStart.x) / 5;
-                let dy = (e.touches[0].clientY - touchStart.y) / 5;
-                myX += dx;
-                myY += dy;
-                sendMove();
-                touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-            }
-        }, {passive: false});
-        
-        document.addEventListener('touchend', () => {
-            touchStart = null;
-        });
-    </script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
