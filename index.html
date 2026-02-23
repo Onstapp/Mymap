@@ -3,58 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VPN Виджет</title>
+    <title>PotatoVPN - Свободный доступ</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #0a0a0a;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 15px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Анимированный фон */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.03) 0%, transparent 50%);
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .vpn-container {
-            max-width: 400px;
+            max-width: 420px;
             width: 100%;
+            position: relative;
+            z-index: 1;
         }
 
         .vpn-card {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: #1a1a1a;
+            border-radius: 30px;
+            padding: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 215, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 215, 0, 0.3);
         }
 
         .vpn-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
+            position: relative;
         }
 
-        .vpn-header h2 {
-            color: #333;
-            font-size: 24px;
-            margin-bottom: 10px;
+        .vpn-header h1 {
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .vpn-header h1 span {
+            font-size: 20px;
+            display: inline-block;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
         }
 
         .vpn-header p {
-            color: #666;
+            color: #888;
             font-size: 14px;
+        }
+
+        .status-panel {
+            background: #0f0f0f;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
         }
 
         .connection-status {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
             gap: 10px;
-            margin-bottom: 30px;
         }
 
         .status-indicator {
@@ -62,43 +116,69 @@
             height: 12px;
             border-radius: 50%;
             background-color: #ff4444;
-            transition: background-color 0.3s ease;
+            position: relative;
         }
 
         .status-indicator.active {
-            background-color: #00C851;
+            background-color: #FFD700;
+            box-shadow: 0 0 15px #FFD700;
+        }
+
+        .status-indicator.active::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 215, 0, 0.3);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { width: 12px; height: 12px; opacity: 1; }
+            100% { width: 30px; height: 30px; opacity: 0; }
         }
 
         .status-text {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .server-info {
-            background: #f5f5f5;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-
-        .info-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .info-label {
-            color: #666;
-        }
-
-        .info-value {
-            color: #333;
+            color: #fff;
             font-weight: 500;
+        }
+
+        .connection-time {
+            color: #FFD700;
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        .ip-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .ip-box {
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+
+        .ip-label {
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .ip-value {
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: 600;
+            word-break: break-all;
         }
 
         .location-selector {
@@ -107,101 +187,225 @@
 
         .location-selector label {
             display: block;
-            margin-bottom: 8px;
-            color: #666;
+            margin-bottom: 10px;
+            color: #FFD700;
             font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
-        .location-selector select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.3s;
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .server-option {
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 15px 10px;
             cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
         }
 
-        .location-selector select:focus {
-            border-color: #667eea;
+        .server-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+            transition: 0.5s;
+        }
+
+        .server-option:hover::before {
+            left: 100%;
+        }
+
+        .server-option.selected {
+            border-color: #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+            background: #1a1a1a;
+        }
+
+        .server-option.selected .server-flag,
+        .server-option.selected .server-name {
+            color: #FFD700;
+        }
+
+        .server-flag {
+            font-size: 24px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .server-name {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .server-ping {
+            color: #00C851;
+            font-size: 11px;
+            margin-top: 5px;
         }
 
         .connect-btn {
             width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 18px;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #000;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
             margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .connect-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: 0.5s;
+        }
+
+        .connect-btn:hover::before {
+            left: 100%;
         }
 
         .connect-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+        }
+
+        .connect-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .connect-btn.connected {
-            background: linear-gradient(135deg, #00C851 0%, #007E33 100%);
+            background: linear-gradient(135deg, #FF4444 0%, #CC0000 100%);
+            color: white;
         }
 
-        .data-stats {
+        .stats-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
+            margin-bottom: 15px;
         }
 
-        .stat-item {
-            background: #f5f5f5;
-            border-radius: 10px;
+        .stat-card {
+            background: #0f0f0f;
+            border-radius: 15px;
             padding: 15px;
             text-align: center;
+            border: 1px solid #333;
         }
 
         .stat-value {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+            color: #FFD700;
+            font-size: 22px;
+            font-weight: 700;
             margin-bottom: 5px;
+            font-family: monospace;
         }
 
         .stat-label {
+            color: #888;
             font-size: 12px;
-            color: #666;
+            text-transform: uppercase;
         }
 
-        .error-message {
-            color: #ff4444;
-            font-size: 12px;
-            margin-top: 10px;
-            text-align: center;
-            display: none;
+        .youtube-banner {
+            background: linear-gradient(135deg, #FF0000 0%, #CC0000 100%);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: glow 2s infinite;
         }
 
-        .speed-test {
-            margin-top: 15px;
-            text-align: center;
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(255, 0, 0, 0.6); }
         }
 
-        .speed-btn {
-            background: none;
-            border: 2px solid #667eea;
-            color: #667eea;
-            padding: 8px 16px;
-            border-radius: 20px;
+        .youtube-icon {
+            font-size: 40px;
+        }
+
+        .youtube-text {
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .youtube-text small {
+            display: block;
+            font-size: 11px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .unblock-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 25px;
             font-size: 12px;
             cursor: pointer;
             transition: all 0.3s;
+            margin-left: auto;
         }
 
-        .speed-btn:hover {
-            background: #667eea;
-            color: white;
+        .unblock-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .error-message {
+            color: #FF4444;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+            background: rgba(255, 68, 68, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #FF4444;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 215, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: #FFD700;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -209,57 +413,87 @@
     <div class="vpn-container">
         <div class="vpn-card">
             <div class="vpn-header">
-                <h2>🛡️ VPN Коннектор</h2>
-                <p>Безопасное и анонимное подключение</p>
+                <h1>POTATO<span>🥔</span>VPN</h1>
+                <p>Разблокируй мир • Свободный интернет</p>
             </div>
 
-            <div class="connection-status">
-                <div class="status-indicator" id="statusIndicator"></div>
-                <span class="status-text" id="statusText">Отключено</span>
+            <div class="status-panel">
+                <div class="connection-status">
+                    <div class="status-left">
+                        <div class="status-indicator" id="statusIndicator"></div>
+                        <span class="status-text" id="statusText">Отключено</span>
+                    </div>
+                    <span class="connection-time" id="connectionTime">--:--</span>
+                </div>
+
+                <div class="ip-info">
+                    <div class="ip-box">
+                        <div class="ip-label">Твой IP</div>
+                        <div class="ip-value" id="yourIP">Загрузка...</div>
+                    </div>
+                    <div class="ip-box">
+                        <div class="ip-label">VPN IP</div>
+                        <div class="ip-value" id="vpnIP">Не подключен</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="server-info">
-                <div class="info-row">
-                    <span class="info-label">Текущий IP:</span>
-                    <span class="info-value" id="currentIP">Загрузка...</span>
+            <div class="youtube-banner" id="youtubeBanner">
+                <span class="youtube-icon">📺</span>
+                <div class="youtube-text">
+                    YouTube заблокирован?
+                    <small>Включи VPN для доступа</small>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Провайдер:</span>
-                    <span class="info-value" id="isp">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Страна:</span>
-                    <span class="info-value" id="country">-</span>
-                </div>
+                <button class="unblock-btn" id="unblockYouTube">Разблокировать</button>
             </div>
 
             <div class="location-selector">
-                <label for="serverLocation">Выберите сервер:</label>
-                <select id="serverLocation">
-                    <option value="auto">🚀 Автоматический выбор</option>
-                    <option value="netherlands">🇳🇱 Нидерланды (Амстердам)</option>
-                    <option value="germany">🇩🇪 Германия (Франкфурт)</option>
-                    <option value="usa">🇺🇸 США (Нью-Йорк)</option>
-                    <option value="singapore">🇸🇬 Сингапур</option>
-                    <option value="japan">🇯🇵 Япония (Токио)</option>
-                </select>
+                <label>🥔 Выбери сервер:</label>
+                <div class="server-grid" id="serverGrid">
+                    <div class="server-option" data-server="russia" data-country="🇷🇺">
+                        <span class="server-flag">🇷🇺</span>
+                        <span class="server-name">Россия</span>
+                        <div class="server-ping">⚡ 5ms</div>
+                    </div>
+                    <div class="server-option" data-server="netherlands" data-country="🇳🇱">
+                        <span class="server-flag">🇳🇱</span>
+                        <span class="server-name">Нидерланды</span>
+                        <div class="server-ping">⚡ 45ms</div>
+                    </div>
+                    <div class="server-option" data-server="germany" data-country="🇩🇪">
+                        <span class="server-flag">🇩🇪</span>
+                        <span class="server-name">Германия</span>
+                        <div class="server-ping">⚡ 52ms</div>
+                    </div>
+                    <div class="server-option" data-server="finland" data-country="🇫🇮">
+                        <span class="server-flag">🇫🇮</span>
+                        <span class="server-name">Финляндия</span>
+                        <div class="server-ping">⚡ 38ms</div>
+                    </div>
+                    <div class="server-option" data-server="usa" data-country="🇺🇸">
+                        <span class="server-flag">🇺🇸</span>
+                        <span class="server-name">США</span>
+                        <div class="server-ping">⚡ 110ms</div>
+                    </div>
+                    <div class="server-option" data-server="turkey" data-country="🇹🇷">
+                        <span class="server-flag">🇹🇷</span>
+                        <span class="server-name">Турция</span>
+                        <div class="server-ping">⚡ 65ms</div>
+                    </div>
+                </div>
             </div>
 
-            <button class="connect-btn" id="connectBtn">Подключиться</button>
+            <button class="connect-btn" id="connectBtn">ПОДКЛЮЧИТЬСЯ</button>
 
-            <div class="data-stats">
-                <div class="stat-item">
-                    <div class="stat-value" id="downloadSpeed">0 Mbps</div>
-                    <div class="stat-label">Загрузка</div>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value" id="downloadSpeed">0</div>
+                    <div class="stat-label">MB/s ↓</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="uploadSpeed">0 Mbps</div>
-                    <div class="stat-label">Отдача</div>
+                <div class="stat-card">
+                    <div class="stat-value" id="uploadSpeed">0</div>
+                    <div class="stat-label">MB/s ↑</div>
                 </div>
-            </div>
-
-            <div class="speed-test">
-                <button class="speed-btn" id="speedTestBtn">🔄 Проверить скорость</button>
             </div>
 
             <div class="error-message" id="errorMessage"></div>
@@ -267,50 +501,64 @@
     </div>
 
     <script>
-        class VPNManager {
+        class PotatoVPN {
             constructor() {
                 this.isConnected = false;
-                this.currentServer = null;
-                this.connectionInterval = null;
+                this.selectedServer = 'netherlands';
+                this.connectionStartTime = null;
+                this.timerInterval = null;
                 this.speedInterval = null;
-                this.downloadSpeed = 0;
-                this.uploadSpeed = 0;
+                this.proxyList = [
+                    { server: 'netherlands', proxy: 'proxy.amsterdam.nl:8080', ip: '185.104.29.1' },
+                    { server: 'germany', proxy: 'proxy.frankfurt.de:3128', ip: '185.130.105.1' },
+                    { server: 'finland', proxy: 'proxy.helsinki.fi:8080', ip: '185.156.46.1' },
+                    { server: 'turkey', proxy: 'proxy.istanbul.tr:8080', ip: '185.126.216.1' },
+                    { server: 'usa', proxy: 'proxy.newyork.us:3128', ip: '192.210.190.1' },
+                    { server: 'russia', proxy: 'proxy.moscow.ru:8080', ip: '185.22.153.1' }
+                ];
                 
                 this.init();
             }
 
             async init() {
-                await this.getCurrentIP();
+                await this.getRealIP();
                 this.setupEventListeners();
+                this.selectServer('netherlands');
             }
 
-            setupEventListeners() {
-                document.getElementById('connectBtn').addEventListener('click', () => this.toggleConnection());
-                document.getElementById('speedTestBtn').addEventListener('click', () => this.testSpeed());
-                document.getElementById('serverLocation').addEventListener('change', (e) => {
-                    if (this.isConnected) {
-                        this.showError('Отключитесь для смены сервера');
-                        e.target.value = this.currentServer || 'auto';
-                    }
-                });
-            }
-
-            async getCurrentIP() {
+            async getRealIP() {
                 try {
                     const response = await fetch('https://api.ipify.org?format=json');
                     const data = await response.json();
-                    document.getElementById('currentIP').textContent = data.ip;
-                    
-                    // Получаем информацию о местоположении
-                    const geoResponse = await fetch(`https://ipapi.co/${data.ip}/json/`);
-                    const geoData = await geoResponse.json();
-                    
-                    document.getElementById('isp').textContent = geoData.org || 'Неизвестно';
-                    document.getElementById('country').textContent = geoData.country_name || 'Неизвестно';
+                    document.getElementById('yourIP').textContent = data.ip;
                 } catch (error) {
-                    console.error('Ошибка получения IP:', error);
-                    document.getElementById('currentIP').textContent = 'Ошибка';
+                    document.getElementById('yourIP').textContent = 'Ошибка';
+                    this.showError('Не удалось определить IP');
                 }
+            }
+
+            setupEventListeners() {
+                document.querySelectorAll('.server-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        if (!this.isConnected) {
+                            const server = option.dataset.server;
+                            this.selectServer(server);
+                        } else {
+                            this.showError('Отключись для смены сервера');
+                        }
+                    });
+                });
+
+                document.getElementById('connectBtn').addEventListener('click', () => this.toggleConnection());
+                document.getElementById('unblockYouTube').addEventListener('click', () => this.quickUnblock());
+            }
+
+            selectServer(server) {
+                this.selectedServer = server;
+                document.querySelectorAll('.server-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                document.querySelector(`[data-server="${server}"]`).classList.add('selected');
             }
 
             toggleConnection() {
@@ -323,33 +571,37 @@
 
             async connect() {
                 try {
-                    const selectedServer = document.getElementById('serverLocation').value;
-                    
-                    // Показываем процесс подключения
-                    this.showError('');
-                    document.getElementById('connectBtn').textContent = 'Подключение...';
-                    document.getElementById('connectBtn').disabled = true;
+                    this.showError('', false);
+                    const btn = document.getElementById('connectBtn');
+                    btn.textContent = 'ПОДКЛЮЧЕНИЕ...';
+                    btn.disabled = true;
 
-                    // Имитация подключения к VPN
-                    await this.simulateConnection(selectedServer);
+                    // Имитация подключения к прокси
+                    await this.simulateConnection();
                     
                     this.isConnected = true;
-                    this.currentServer = selectedServer;
+                    this.connectionStartTime = new Date();
                     
-                    // Обновляем интерфейс
+                    // Обновляем UI
                     document.getElementById('statusIndicator').classList.add('active');
-                    document.getElementById('statusText').textContent = 'Подключено';
-                    document.getElementById('connectBtn').textContent = 'Отключиться';
-                    document.getElementById('connectBtn').classList.add('connected');
+                    document.getElementById('statusText').textContent = 'Подключено к ' + this.getServerName(this.selectedServer);
+                    btn.textContent = 'ОТКЛЮЧИТЬСЯ';
+                    btn.classList.add('connected');
                     
-                    // Имитация VPN IP (меняем отображаемый IP)
-                    this.simulateVPNIP(selectedServer);
+                    // Устанавливаем VPN IP
+                    this.setVPNIP();
+                    
+                    // Запускаем таймер
+                    this.startTimer();
                     
                     // Запускаем симуляцию скорости
                     this.startSpeedSimulation();
                     
+                    // Показываем уведомление
+                    this.showSuccess('YouTube разблокирован!');
+                    
                 } catch (error) {
-                    this.showError('Ошибка подключения. Попробуйте снова.');
+                    this.showError('Ошибка подключения');
                 } finally {
                     document.getElementById('connectBtn').disabled = false;
                 }
@@ -357,123 +609,119 @@
 
             disconnect() {
                 this.isConnected = false;
-                this.currentServer = null;
+                this.connectionStartTime = null;
+                
+                // Останавливаем таймер
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
                 
                 // Останавливаем симуляцию скорости
-                this.stopSpeedSimulation();
-                
-                // Обновляем интерфейс
-                document.getElementById('statusIndicator').classList.remove('active');
-                document.getElementById('statusText').textContent = 'Отключено';
-                document.getElementById('connectBtn').textContent = 'Подключиться';
-                document.getElementById('connectBtn').classList.remove('connected');
-                
-                // Возвращаем реальный IP
-                this.getCurrentIP();
-                
-                // Сбрасываем скорость
-                document.getElementById('downloadSpeed').textContent = '0 Mbps';
-                document.getElementById('uploadSpeed').textContent = '0 Mbps';
-            }
-
-            simulateConnection(server) {
-                return new Promise((resolve) => {
-                    setTimeout(resolve, 2000); // Имитация времени подключения
-                });
-            }
-
-            simulateVPNIP(server) {
-                const vpnIPs = {
-                    'netherlands': '82.192.168.1',
-                    'germany': '93.184.216.34',
-                    'usa': '192.0.2.1',
-                    'singapore': '203.0.113.1',
-                    'japan': '210.173.160.1',
-                    'auto': '185.123.456.78'
-                };
-
-                const countries = {
-                    'netherlands': 'Нидерланды',
-                    'germany': 'Германия',
-                    'usa': 'США',
-                    'singapore': 'Сингапур',
-                    'japan': 'Япония',
-                    'auto': 'Нидерланды'
-                };
-
-                const providers = {
-                    'netherlands': 'AMS-IX B.V.',
-                    'germany': 'DE-CIX',
-                    'usa': 'Verizon Business',
-                    'singapore': 'SingNet',
-                    'japan': 'NTT Communications',
-                    'auto': 'Global VPN Services'
-                };
-
-                document.getElementById('currentIP').textContent = vpnIPs[server] || '185.123.456.78';
-                document.getElementById('country').textContent = countries[server] || 'Нидерланды';
-                document.getElementById('isp').textContent = providers[server] || 'VPN Server';
-            }
-
-            startSpeedSimulation() {
-                this.speedInterval = setInterval(() => {
-                    // Симулируем изменения скорости
-                    this.downloadSpeed = (Math.random() * 50 + 10).toFixed(1);
-                    this.uploadSpeed = (Math.random() * 20 + 5).toFixed(1);
-                    
-                    document.getElementById('downloadSpeed').textContent = this.downloadSpeed + ' Mbps';
-                    document.getElementById('uploadSpeed').textContent = this.uploadSpeed + ' Mbps';
-                }, 2000);
-            }
-
-            stopSpeedSimulation() {
                 if (this.speedInterval) {
                     clearInterval(this.speedInterval);
                     this.speedInterval = null;
                 }
+                
+                // Обновляем UI
+                document.getElementById('statusIndicator').classList.remove('active');
+                document.getElementById('statusText').textContent = 'Отключено';
+                document.getElementById('connectBtn').textContent = 'ПОДКЛЮЧИТЬСЯ';
+                document.getElementById('connectBtn').classList.remove('connected');
+                document.getElementById('connectionTime').textContent = '--:--';
+                document.getElementById('vpnIP').textContent = 'Не подключен';
+                document.getElementById('downloadSpeed').textContent = '0';
+                document.getElementById('uploadSpeed').textContent = '0';
+                
+                // Возвращаем реальный IP
+                this.getRealIP();
             }
 
-            testSpeed() {
-                const speedBtn = document.getElementById('speedTestBtn');
-                const originalText = speedBtn.textContent;
+            simulateConnection() {
+                return new Promise((resolve) => {
+                    setTimeout(resolve, 2000);
+                });
+            }
+
+            getServerName(server) {
+                const names = {
+                    'russia': 'России',
+                    'netherlands': 'Нидерландам',
+                    'germany': 'Германии',
+                    'finland': 'Финляндии',
+                    'usa': 'США',
+                    'turkey': 'Турции'
+                };
+                return names[server] || server;
+            }
+
+            setVPNIP() {
+                const proxy = this.proxyList.find(p => p.server === this.selectedServer);
+                if (proxy) {
+                    document.getElementById('vpnIP').textContent = proxy.ip;
+                    document.getElementById('yourIP').textContent = proxy.ip; // Меняем IP на VPN
+                }
+            }
+
+            startTimer() {
+                this.timerInterval = setInterval(() => {
+                    if (this.connectionStartTime) {
+                        const diff = Math.floor((new Date() - this.connectionStartTime) / 1000);
+                        const minutes = Math.floor(diff / 60);
+                        const seconds = diff % 60;
+                        document.getElementById('connectionTime').textContent = 
+                            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                }, 1000);
+            }
+
+            startSpeedSimulation() {
+                this.speedInterval = setInterval(() => {
+                    const download = (Math.random() * 15 + 5).toFixed(1);
+                    const upload = (Math.random() * 8 + 2).toFixed(1);
+                    
+                    document.getElementById('downloadSpeed').textContent = download;
+                    document.getElementById('uploadSpeed').textContent = upload;
+                }, 2000);
+            }
+
+            quickUnblock() {
+                if (!this.isConnected) {
+                    this.selectServer('netherlands');
+                    this.connect();
+                } else {
+                    // Открываем YouTube в новой вкладке
+                    window.open('https://www.youtube.com', '_blank');
+                }
+            }
+
+            showError(message) {
+                const errorEl = document.getElementById('errorMessage');
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                errorEl.style.color = '#FF4444';
                 
-                speedBtn.textContent = '⏳ Тестирование...';
-                speedBtn.disabled = true;
-                
-                // Симуляция теста скорости
                 setTimeout(() => {
-                    const download = (Math.random() * 100 + 20).toFixed(1);
-                    const upload = (Math.random() * 50 + 10).toFixed(1);
-                    
-                    document.getElementById('downloadSpeed').textContent = download + ' Mbps';
-                    document.getElementById('uploadSpeed').textContent = upload + ' Mbps';
-                    
-                    speedBtn.textContent = originalText;
-                    speedBtn.disabled = false;
-                    
-                    this.showError('', false);
+                    errorEl.style.display = 'none';
                 }, 3000);
             }
 
-            showError(message, show = true) {
-                const errorElement = document.getElementById('errorMessage');
-                if (show && message) {
-                    errorElement.textContent = message;
-                    errorElement.style.display = 'block';
-                    
-                    // Автоматически скрываем через 3 секунды
-                    setTimeout(() => {
-                        errorElement.style.display = 'none';
-                    }, 3000);
-                } else {
-                    errorElement.style.display = 'none';
-                }
+            showSuccess(message) {
+                const errorEl = document.getElementById('errorMessage');
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                errorEl.style.color = '#00C851';
+                errorEl.style.borderColor = '#00C851';
+                
+                setTimeout(() => {
+                    errorEl.style.display = 'none';
+                }, 3000);
             }
         }
 
-        // Инициализация при загрузке страницы
+        // Запускаем VPN
         document.addEventListener('DOMContentLoaded', () => {
-            new VPNManager();
+            window.vpn = new PotatoVPN();
         });
     </script>
 </body>
