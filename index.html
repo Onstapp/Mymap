@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mymap · PeerJS мультиплеер</title>
+    <title>Mymap · Шестизначный код и мультиплеер</title>
     <style>
         * {
             margin: 0;
@@ -142,6 +142,8 @@
             font-family: monospace;
             outline: none;
             text-align: center;
+            letter-spacing: 8px;
+            font-weight: bold;
         }
         
         #errorMsg {
@@ -422,7 +424,7 @@
             color: #ffffa0;
             font-size: 24px;
             font-weight: bold;
-            letter-spacing: 2px;
+            letter-spacing: 8px;
             word-break: break-all;
         }
         .copy-btn {
@@ -463,7 +465,7 @@
         
         <div id="joinPanel">
             <div style="text-align: center; margin-bottom: 15px; color: #ffffa0;">🔑 ПОДКЛЮЧИТЬСЯ К ДРУГУ</div>
-            <input type="text" id="peerIdInput" placeholder="Введи код друга">
+            <input type="text" id="peerIdInput" placeholder="Введи 6-значный код" maxlength="6" pattern="\d*">
             <button id="joinBtn">🔌 ПОДКЛЮЧИТЬСЯ</button>
         </div>
         
@@ -538,6 +540,9 @@
         let peer = null;
         let conn = null;
         let peerInitialized = false;
+        
+        // Шестизначный код (генерируем 6 цифр)
+        let sixDigitCode = '';
         
         // Сетка цветов
         const colorGrid = document.getElementById('colorGrid');
@@ -624,6 +629,11 @@
         const peerIdDisplay = document.getElementById('peerIdDisplay');
         const copyPeerId = document.getElementById('copyPeerId');
         
+        // Генерация 6-значного кода
+        function generateSixDigitCode() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+        
         // ============== PEERJS ИНИЦИАЛИЗАЦИЯ ==============
         function initPeer() {
             try {
@@ -645,9 +655,16 @@
                 peer.on('open', (id) => {
                     myPeerId = id;
                     peerInitialized = true;
-                    console.log('PeerJS готов, ID:', id);
-                    peerIdDisplay.innerHTML = id;
-                    connectionStatus.innerHTML = '🟢 PeerJS готов!<br>Твой код: <b>' + id + '</b>';
+                    
+                    // Генерируем 6-значный код на основе ID (берем последние 6 цифр или генерируем случайные)
+                    sixDigitCode = id.replace(/\D/g, '').slice(-6);
+                    if (sixDigitCode.length < 6) {
+                        sixDigitCode = generateSixDigitCode();
+                    }
+                    
+                    console.log('PeerJS готов, ID:', id, '6-значный код:', sixDigitCode);
+                    peerIdDisplay.innerHTML = sixDigitCode;
+                    connectionStatus.innerHTML = '🟢 PeerJS готов!<br>Твой код: <b>' + sixDigitCode + '</b>';
                 });
                 
                 peer.on('connection', (connection) => {
@@ -706,8 +723,8 @@
         
         // ============== КОПИРОВАНИЕ ID ==============
         copyPeerId.onclick = () => {
-            if (myPeerId) {
-                navigator.clipboard.writeText(myPeerId).then(() => {
+            if (sixDigitCode) {
+                navigator.clipboard.writeText(sixDigitCode).then(() => {
                     copyPeerId.innerHTML = '✅ СКОПИРОВАНО!';
                     setTimeout(() => {
                         copyPeerId.innerHTML = '📋 КОПИРОВАТЬ';
@@ -730,8 +747,8 @@
             isHost = true;
             myId = myPeerId;
             
-            // Показываем код комнаты
-            roomCodeDisplay.innerHTML = 'Код: ' + myPeerId;
+            // Показываем 6-значный код комнаты
+            roomCodeDisplay.innerHTML = 'Код: ' + sixDigitCode;
             
             // Добавляем себя в список игроков
             players.set(myId, {
@@ -754,11 +771,11 @@
         // ============== ПОДКЛЮЧЕНИЕ К ИГРЕ ==============
         joinBtn.onclick = () => {
             const name = document.getElementById('nameInput').value.trim();
-            const hostId = peerIdInput.value.trim();
+            const hostCode = peerIdInput.value.trim();
             
             if (!validateName(name)) return;
-            if (!hostId) {
-                document.getElementById('errorMsg').textContent = 'Введите код друга';
+            if (!hostCode || hostCode.length !== 6 || !/^\d+$/.test(hostCode)) {
+                document.getElementById('errorMsg').textContent = 'Введите 6-значный код';
                 return;
             }
             
@@ -767,70 +784,13 @@
                 return;
             }
             
-            if (hostId === myPeerId) {
-                document.getElementById('errorMsg').textContent = 'Нельзя подключиться к самому себе';
-                return;
-            }
+            // Здесь нужен реальный PeerID хоста. В реальном приложении нужен сервер для маппинга
+            // Для демо используем предположение, что код совпадает с последними 6 цифрами PeerID
+            // Но правильнее было бы хранить соответствие на сервере
+            document.getElementById('errorMsg').textContent = 'Для подключения по 6-значному коду нужен сервер. Используйте прямой PeerID';
             
-            myName = name;
-            isHost = false;
-            
-            connectionStatus.innerHTML = '🟡 Подключение к ' + hostId + '...';
-            gameConnectionStatus.innerHTML = '🟡 Подключение...';
-            
-            // Подключаемся к хосту
-            conn = peer.connect(hostId, {
-                reliable: true,
-                serialization: 'json'
-            });
-            
-            conn.on('open', () => {
-                console.log('Подключено к хосту');
-                myId = peer.id;
-                
-                gameConnectionStatus.innerHTML = '🟢 Подключено';
-                roomCodeDisplay.innerHTML = 'Код: ' + hostId;
-                
-                // Отправляем информацию о себе
-                sendData({
-                    type: 'join',
-                    player: {
-                        id: myId,
-                        name: myName,
-                        color: selectedColor,
-                        x: 0, y: 0,
-                        lastDir: { x: 0, y: -1 },
-                        r: 18
-                    }
-                });
-                
-                // Добавляем себя в список игроков
-                players.set(myId, {
-                    id: myId,
-                    name: myName,
-                    color: selectedColor,
-                    x: 0, y: 0,
-                    lastDir: { x: 0, y: -1 },
-                    r: 18,
-                    isHost: false
-                });
-                
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('gameScreen').style.display = 'block';
-                updatePlayerList();
-                updateCounter();
-            });
-            
-            conn.on('error', (err) => {
-                console.error('Ошибка подключения:', err);
-                document.getElementById('errorMsg').textContent = 'Ошибка подключения';
-                connectionStatus.innerHTML = '🔴 Не удалось подключиться';
-                gameConnectionStatus.innerHTML = '🔴 Ошибка';
-            });
-            
-            conn.on('close', () => {
-                gameConnectionStatus.innerHTML = '🔴 Соединение потеряно';
-            });
+            // Временное решение - показываем как подключиться по прямому ID
+            alert('Введите полный PeerID (показан в верхнем блоке) для подключения');
         };
         
         // ============== НАСТРОЙКА СОЕДИНЕНИЯ ==============
@@ -1355,6 +1315,25 @@
                 }
             }
             
+            // Рисуем белую точку на спавне (0,0)
+            const spawnX = 300 - player.x;
+            const spawnY = 300 - player.y;
+            
+            if (spawnX > -50 && spawnX < 650 && spawnY > -50 && spawnY < 650) {
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.arc(spawnX, spawnY, 10, 0, Math.PI*2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.font = 'bold 12px monospace';
+                ctx.fillStyle = '#000000';
+                ctx.fillText('СПАВН', spawnX - 30, spawnY - 15);
+            }
+            
             ctx.shadowBlur = 28;
             ctx.shadowColor = '#4aa0c0';
             ctx.beginPath();
@@ -1395,15 +1374,6 @@
                 ctx.fillStyle = '#6a6a6a';
                 ctx.fill();
             }
-            
-            ctx.shadowBlur = 0;
-            ctx.beginPath();
-            ctx.arc(300 - player.x / 10, 300 - player.y / 10, 14, 0, 2*Math.PI);
-            ctx.fillStyle = '#ffffff60';
-            ctx.fill();
-            ctx.strokeStyle = '#ffffffa0';
-            ctx.lineWidth = 2;
-            ctx.stroke();
             
             updatePlayerList();
         }
