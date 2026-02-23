@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PotatoVPN - Свободный доступ</title>
+    <title>CactusVPN - Колючая защита</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         }
 
         body {
-            background-color: #0a0a0a;
+            background: #0a0f0a;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -23,36 +23,48 @@
             overflow-x: hidden;
         }
 
-        /* Анимированный фон */
+        /* Анимированный фон с кактусами */
         body::before {
-            content: '';
+            content: '🌵';
             position: absolute;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 215, 0, 0.03) 0%, transparent 50%);
-            animation: rotate 20s linear infinite;
-            z-index: 0;
+            font-size: 150px;
+            opacity: 0.03;
+            bottom: -50px;
+            right: -50px;
+            transform: rotate(15deg);
+            animation: float 6s ease-in-out infinite;
         }
 
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        body::after {
+            content: '🌵';
+            position: absolute;
+            font-size: 100px;
+            opacity: 0.03;
+            top: -20px;
+            left: -20px;
+            transform: rotate(-15deg);
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: rotate(15deg) translateY(0); }
+            50% { transform: rotate(15deg) translateY(-20px); }
         }
 
         .vpn-container {
-            max-width: 420px;
+            max-width: 400px;
             width: 100%;
             position: relative;
             z-index: 1;
         }
 
         .vpn-card {
-            background: #1a1a1a;
+            background: #0f1510;
             border-radius: 30px;
             padding: 25px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 215, 0, 0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(46, 204, 113, 0.2);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 215, 0, 0.3);
+            border: 1px solid rgba(46, 204, 113, 0.3);
         }
 
         .vpn-header {
@@ -64,18 +76,19 @@
         .vpn-header h1 {
             font-size: 42px;
             font-weight: 800;
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 5px;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            text-shadow: 0 0 20px rgba(46, 204, 113, 0.3);
             letter-spacing: 1px;
         }
 
         .vpn-header h1 span {
-            font-size: 20px;
+            font-size: 24px;
             display: inline-block;
             animation: bounce 2s infinite;
+            filter: drop-shadow(0 0 5px #2ecc71);
         }
 
         @keyframes bounce {
@@ -89,11 +102,11 @@
         }
 
         .status-panel {
-            background: #0f0f0f;
+            background: #0a0f0a;
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 20px;
-            border: 1px solid #333;
+            border: 1px solid #1a2a1a;
         }
 
         .connection-status {
@@ -102,7 +115,7 @@
             justify-content: space-between;
             margin-bottom: 15px;
             padding-bottom: 15px;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid #1a2a1a;
         }
 
         .status-left {
@@ -115,13 +128,13 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background-color: #ff4444;
+            background-color: #e74c3c;
             position: relative;
         }
 
         .status-indicator.active {
-            background-color: #FFD700;
-            box-shadow: 0 0 15px #FFD700;
+            background-color: #2ecc71;
+            box-shadow: 0 0 15px #2ecc71;
         }
 
         .status-indicator.active::before {
@@ -130,7 +143,7 @@
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: rgba(255, 215, 0, 0.3);
+            background: rgba(46, 204, 113, 0.3);
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -148,9 +161,12 @@
         }
 
         .connection-time {
-            color: #FFD700;
+            color: #2ecc71;
             font-size: 14px;
             font-family: monospace;
+            background: #1a2a1a;
+            padding: 4px 8px;
+            border-radius: 20px;
         }
 
         .ip-info {
@@ -160,10 +176,10 @@
         }
 
         .ip-box {
-            background: #1a1a1a;
+            background: #0f1510;
             padding: 12px;
             border-radius: 12px;
-            border: 1px solid #333;
+            border: 1px solid #1a2a1a;
         }
 
         .ip-label {
@@ -175,10 +191,11 @@
         }
 
         .ip-value {
-            color: #FFD700;
+            color: #2ecc71;
             font-size: 14px;
             font-weight: 600;
             word-break: break-all;
+            font-family: monospace;
         }
 
         .location-selector {
@@ -188,78 +205,82 @@
         .location-selector label {
             display: block;
             margin-bottom: 10px;
-            color: #FFD700;
+            color: #2ecc71;
             font-size: 14px;
             font-weight: 600;
             letter-spacing: 0.5px;
         }
 
-        .server-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+        .location-selector label i {
+            margin-right: 5px;
         }
 
-        .server-option {
-            background: #0f0f0f;
-            border: 1px solid #333;
-            border-radius: 15px;
-            padding: 15px 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
+        .custom-select {
             position: relative;
-            overflow: hidden;
-        }
-
-        .server-option::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
             width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
-            transition: 0.5s;
         }
 
-        .server-option:hover::before {
-            left: 100%;
-        }
-
-        .server-option.selected {
-            border-color: #FFD700;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
-            background: #1a1a1a;
-        }
-
-        .server-option.selected .server-flag,
-        .server-option.selected .server-name {
-            color: #FFD700;
-        }
-
-        .server-flag {
-            font-size: 24px;
-            margin-bottom: 5px;
-            display: block;
-        }
-
-        .server-name {
+        .custom-select select {
+            width: 100%;
+            padding: 15px 20px;
+            background: #0a0f0a;
+            border: 2px solid #1a2a1a;
+            border-radius: 15px;
             color: #fff;
-            font-size: 13px;
+            font-size: 15px;
             font-weight: 500;
+            appearance: none;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s;
         }
 
-        .server-ping {
-            color: #00C851;
+        .custom-select select:hover {
+            border-color: #2ecc71;
+            background: #0f1510;
+        }
+
+        .custom-select select:focus {
+            border-color: #2ecc71;
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.2);
+        }
+
+        .custom-select select option {
+            background: #0a0f0a;
+            color: #fff;
+            padding: 10px;
+        }
+
+        .custom-select::after {
+            content: '▼';
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            color: #2ecc71;
+            pointer-events: none;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .custom-select:hover::after {
+            color: #fff;
+        }
+
+        .server-ping-badge {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background: #1a2a1a;
+            border-radius: 20px;
+            color: #2ecc71;
             font-size: 11px;
-            margin-top: 5px;
         }
 
         .connect-btn {
             width: 100%;
             padding: 18px;
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
             color: #000;
             border: none;
             border-radius: 50px;
@@ -291,16 +312,17 @@
 
         .connect-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+            box-shadow: 0 10px 30px rgba(46, 204, 113, 0.4);
         }
 
         .connect-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
         }
 
         .connect-btn.connected {
-            background: linear-gradient(135deg, #FF4444 0%, #CC0000 100%);
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
             color: white;
         }
 
@@ -312,16 +334,21 @@
         }
 
         .stat-card {
-            background: #0f0f0f;
+            background: #0a0f0a;
             border-radius: 15px;
             padding: 15px;
             text-align: center;
-            border: 1px solid #333;
+            border: 1px solid #1a2a1a;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: #2ecc71;
         }
 
         .stat-value {
-            color: #FFD700;
-            font-size: 22px;
+            color: #2ecc71;
+            font-size: 24px;
             font-weight: 700;
             margin-bottom: 5px;
             font-family: monospace;
@@ -331,76 +358,84 @@
             color: #888;
             font-size: 12px;
             text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .youtube-banner {
-            background: linear-gradient(135deg, #FF0000 0%, #CC0000 100%);
+        .data-usage {
+            background: #0a0f0a;
             border-radius: 15px;
             padding: 15px;
+            border: 1px solid #1a2a1a;
             margin-bottom: 15px;
+        }
+
+        .usage-bar {
+            height: 8px;
+            background: #1a2a1a;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .usage-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+
+        .usage-text {
             display: flex;
-            align-items: center;
-            gap: 15px;
-            animation: glow 2s infinite;
-        }
-
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
-            50% { box-shadow: 0 0 40px rgba(255, 0, 0, 0.6); }
-        }
-
-        .youtube-icon {
-            font-size: 40px;
-        }
-
-        .youtube-text {
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .youtube-text small {
-            display: block;
-            font-size: 11px;
-            opacity: 0.9;
-            margin-top: 5px;
-        }
-
-        .unblock-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 25px;
+            justify-content: space-between;
+            color: #888;
             font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-left: auto;
         }
 
-        .unblock-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+        .usage-text span:last-child {
+            color: #2ecc71;
+        }
+
+        .features {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+
+        .feature {
+            text-align: center;
+        }
+
+        .feature-icon {
+            color: #2ecc71;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .feature-text {
+            color: #888;
+            font-size: 11px;
         }
 
         .error-message {
-            color: #FF4444;
+            color: #e74c3c;
             font-size: 12px;
             text-align: center;
             margin-top: 10px;
             display: none;
-            background: rgba(255, 68, 68, 0.1);
+            background: rgba(231, 76, 60, 0.1);
             padding: 10px;
             border-radius: 10px;
-            border: 1px solid #FF4444;
+            border: 1px solid #e74c3c;
         }
 
         .loading {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255, 215, 0, 0.3);
+            border: 3px solid rgba(46, 204, 113, 0.3);
             border-radius: 50%;
-            border-top-color: #FFD700;
+            border-top-color: #2ecc71;
             animation: spin 1s ease-in-out infinite;
         }
 
@@ -413,8 +448,8 @@
     <div class="vpn-container">
         <div class="vpn-card">
             <div class="vpn-header">
-                <h1>POTATO<span>🥔</span>VPN</h1>
-                <p>Разблокируй мир • Свободный интернет</p>
+                <h1>CACTUS<span>🌵</span>VPN</h1>
+                <p>Колючая защита • Быстрый доступ</p>
             </div>
 
             <div class="status-panel">
@@ -438,48 +473,17 @@
                 </div>
             </div>
 
-            <div class="youtube-banner" id="youtubeBanner">
-                <span class="youtube-icon">📺</span>
-                <div class="youtube-text">
-                    YouTube заблокирован?
-                    <small>Включи VPN для доступа</small>
-                </div>
-                <button class="unblock-btn" id="unblockYouTube">Разблокировать</button>
-            </div>
-
             <div class="location-selector">
-                <label>🥔 Выбери сервер:</label>
-                <div class="server-grid" id="serverGrid">
-                    <div class="server-option" data-server="russia" data-country="🇷🇺">
-                        <span class="server-flag">🇷🇺</span>
-                        <span class="server-name">Россия</span>
-                        <div class="server-ping">⚡ 5ms</div>
-                    </div>
-                    <div class="server-option" data-server="netherlands" data-country="🇳🇱">
-                        <span class="server-flag">🇳🇱</span>
-                        <span class="server-name">Нидерланды</span>
-                        <div class="server-ping">⚡ 45ms</div>
-                    </div>
-                    <div class="server-option" data-server="germany" data-country="🇩🇪">
-                        <span class="server-flag">🇩🇪</span>
-                        <span class="server-name">Германия</span>
-                        <div class="server-ping">⚡ 52ms</div>
-                    </div>
-                    <div class="server-option" data-server="finland" data-country="🇫🇮">
-                        <span class="server-flag">🇫🇮</span>
-                        <span class="server-name">Финляндия</span>
-                        <div class="server-ping">⚡ 38ms</div>
-                    </div>
-                    <div class="server-option" data-server="usa" data-country="🇺🇸">
-                        <span class="server-flag">🇺🇸</span>
-                        <span class="server-name">США</span>
-                        <div class="server-ping">⚡ 110ms</div>
-                    </div>
-                    <div class="server-option" data-server="turkey" data-country="🇹🇷">
-                        <span class="server-flag">🇹🇷</span>
-                        <span class="server-name">Турция</span>
-                        <div class="server-ping">⚡ 65ms</div>
-                    </div>
+                <label><i>🌵</i> Выбери сервер:</label>
+                <div class="custom-select">
+                    <select id="serverSelect">
+                        <option value="netherlands" data-ping="45ms">🇳🇱 Нидерланды (Амстердам) <span class="server-ping-badge">⚡ 45ms</span></option>
+                        <option value="germany" data-ping="52ms">🇩🇪 Германия (Франкфурт) <span class="server-ping-badge">⚡ 52ms</span></option>
+                        <option value="finland" data-ping="38ms">🇫🇮 Финляндия (Хельсинки) <span class="server-ping-badge">⚡ 38ms</span></option>
+                        <option value="sweden" data-ping="42ms">🇸🇪 Швеция (Стокгольм) <span class="server-ping-badge">⚡ 42ms</span></option>
+                        <option value="usa" data-ping="110ms">🇺🇸 США (Нью-Йорк) <span class="server-ping-badge">⚡ 110ms</span></option>
+                        <option value="turkey" data-ping="65ms">🇹🇷 Турция (Стамбул) <span class="server-ping-badge">⚡ 65ms</span></option>
+                    </select>
                 </div>
             </div>
 
@@ -496,26 +500,59 @@
                 </div>
             </div>
 
+            <div class="data-usage">
+                <div class="usage-text">
+                    <span>Использовано трафика</span>
+                    <span id="dataUsed">0 MB</span>
+                </div>
+                <div class="usage-bar">
+                    <div class="usage-progress" id="dataProgress" style="width: 0%"></div>
+                </div>
+                <div class="usage-text">
+                    <span>Сессия</span>
+                    <span id="sessionData">0 MB</span>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🛡️</div>
+                    <div class="feature-text">No Logs</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-text">10 Gbps</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🌍</div>
+                    <div class="feature-text">6 стран</div>
+                </div>
+            </div>
+
             <div class="error-message" id="errorMessage"></div>
         </div>
     </div>
 
     <script>
-        class PotatoVPN {
+        class CactusVPN {
             constructor() {
                 this.isConnected = false;
-                this.selectedServer = 'netherlands';
                 this.connectionStartTime = null;
                 this.timerInterval = null;
                 this.speedInterval = null;
-                this.proxyList = [
-                    { server: 'netherlands', proxy: 'proxy.amsterdam.nl:8080', ip: '185.104.29.1' },
-                    { server: 'germany', proxy: 'proxy.frankfurt.de:3128', ip: '185.130.105.1' },
-                    { server: 'finland', proxy: 'proxy.helsinki.fi:8080', ip: '185.156.46.1' },
-                    { server: 'turkey', proxy: 'proxy.istanbul.tr:8080', ip: '185.126.216.1' },
-                    { server: 'usa', proxy: 'proxy.newyork.us:3128', ip: '192.210.190.1' },
-                    { server: 'russia', proxy: 'proxy.moscow.ru:8080', ip: '185.22.153.1' }
-                ];
+                this.dataInterval = null;
+                this.dataUsed = 0;
+                this.sessionData = 0;
+                
+                // Прокси сервера
+                this.proxyList = {
+                    'netherlands': { ip: '185.104.29.45', name: 'Нидерланды', ping: 45 },
+                    'germany': { ip: '185.130.105.78', name: 'Германия', ping: 52 },
+                    'finland': { ip: '185.156.46.23', name: 'Финляндия', ping: 38 },
+                    'sweden': { ip: '185.157.47.12', name: 'Швеция', ping: 42 },
+                    'usa': { ip: '192.210.190.156', name: 'США', ping: 110 },
+                    'turkey': { ip: '185.126.216.89', name: 'Турция', ping: 65 }
+                };
                 
                 this.init();
             }
@@ -523,7 +560,6 @@
             async init() {
                 await this.getRealIP();
                 this.setupEventListeners();
-                this.selectServer('netherlands');
             }
 
             async getRealIP() {
@@ -538,27 +574,7 @@
             }
 
             setupEventListeners() {
-                document.querySelectorAll('.server-option').forEach(option => {
-                    option.addEventListener('click', () => {
-                        if (!this.isConnected) {
-                            const server = option.dataset.server;
-                            this.selectServer(server);
-                        } else {
-                            this.showError('Отключись для смены сервера');
-                        }
-                    });
-                });
-
                 document.getElementById('connectBtn').addEventListener('click', () => this.toggleConnection());
-                document.getElementById('unblockYouTube').addEventListener('click', () => this.quickUnblock());
-            }
-
-            selectServer(server) {
-                this.selectedServer = server;
-                document.querySelectorAll('.server-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-                document.querySelector(`[data-server="${server}"]`).classList.add('selected');
             }
 
             toggleConnection() {
@@ -576,7 +592,9 @@
                     btn.textContent = 'ПОДКЛЮЧЕНИЕ...';
                     btn.disabled = true;
 
-                    // Имитация подключения к прокси
+                    const selectedServer = document.getElementById('serverSelect').value;
+                    
+                    // Имитация подключения
                     await this.simulateConnection();
                     
                     this.isConnected = true;
@@ -584,12 +602,12 @@
                     
                     // Обновляем UI
                     document.getElementById('statusIndicator').classList.add('active');
-                    document.getElementById('statusText').textContent = 'Подключено к ' + this.getServerName(this.selectedServer);
+                    document.getElementById('statusText').textContent = `Подключено к ${this.proxyList[selectedServer].name}`;
                     btn.textContent = 'ОТКЛЮЧИТЬСЯ';
                     btn.classList.add('connected');
                     
                     // Устанавливаем VPN IP
-                    this.setVPNIP();
+                    this.setVPNIP(selectedServer);
                     
                     // Запускаем таймер
                     this.startTimer();
@@ -597,8 +615,10 @@
                     // Запускаем симуляцию скорости
                     this.startSpeedSimulation();
                     
-                    // Показываем уведомление
-                    this.showSuccess('YouTube разблокирован!');
+                    // Запускаем счетчик данных
+                    this.startDataCounter();
+                    
+                    this.showSuccess('Подключение установлено');
                     
                 } catch (error) {
                     this.showError('Ошибка подключения');
@@ -610,18 +630,13 @@
             disconnect() {
                 this.isConnected = false;
                 this.connectionStartTime = null;
+                this.dataUsed = 0;
+                this.sessionData = 0;
                 
-                // Останавливаем таймер
-                if (this.timerInterval) {
-                    clearInterval(this.timerInterval);
-                    this.timerInterval = null;
-                }
-                
-                // Останавливаем симуляцию скорости
-                if (this.speedInterval) {
-                    clearInterval(this.speedInterval);
-                    this.speedInterval = null;
-                }
+                // Останавливаем все интервалы
+                [this.timerInterval, this.speedInterval, this.dataInterval].forEach(interval => {
+                    if (interval) clearInterval(interval);
+                });
                 
                 // Обновляем UI
                 document.getElementById('statusIndicator').classList.remove('active');
@@ -632,6 +647,9 @@
                 document.getElementById('vpnIP').textContent = 'Не подключен';
                 document.getElementById('downloadSpeed').textContent = '0';
                 document.getElementById('uploadSpeed').textContent = '0';
+                document.getElementById('dataUsed').textContent = '0 MB';
+                document.getElementById('sessionData').textContent = '0 MB';
+                document.getElementById('dataProgress').style.width = '0%';
                 
                 // Возвращаем реальный IP
                 this.getRealIP();
@@ -643,23 +661,11 @@
                 });
             }
 
-            getServerName(server) {
-                const names = {
-                    'russia': 'России',
-                    'netherlands': 'Нидерландам',
-                    'germany': 'Германии',
-                    'finland': 'Финляндии',
-                    'usa': 'США',
-                    'turkey': 'Турции'
-                };
-                return names[server] || server;
-            }
-
-            setVPNIP() {
-                const proxy = this.proxyList.find(p => p.server === this.selectedServer);
+            setVPNIP(server) {
+                const proxy = this.proxyList[server];
                 if (proxy) {
                     document.getElementById('vpnIP').textContent = proxy.ip;
-                    document.getElementById('yourIP').textContent = proxy.ip; // Меняем IP на VPN
+                    document.getElementById('yourIP').textContent = proxy.ip;
                 }
             }
 
@@ -685,21 +691,28 @@
                 }, 2000);
             }
 
-            quickUnblock() {
-                if (!this.isConnected) {
-                    this.selectServer('netherlands');
-                    this.connect();
-                } else {
-                    // Открываем YouTube в новой вкладке
-                    window.open('https://www.youtube.com', '_blank');
-                }
+            startDataCounter() {
+                this.dataInterval = setInterval(() => {
+                    // Симулируем использование трафика
+                    const dataIncrease = Math.random() * 2;
+                    this.dataUsed += dataIncrease;
+                    this.sessionData += dataIncrease;
+                    
+                    // Обновляем отображение
+                    document.getElementById('dataUsed').textContent = `${this.dataUsed.toFixed(1)} MB`;
+                    document.getElementById('sessionData').textContent = `${this.sessionData.toFixed(1)} MB`;
+                    
+                    // Обновляем прогресс-бар (предположим лимит 1000 MB)
+                    const progress = (this.dataUsed / 1000) * 100;
+                    document.getElementById('dataProgress').style.width = `${Math.min(progress, 100)}%`;
+                }, 3000);
             }
 
             showError(message) {
                 const errorEl = document.getElementById('errorMessage');
                 errorEl.textContent = message;
                 errorEl.style.display = 'block';
-                errorEl.style.color = '#FF4444';
+                errorEl.style.color = '#e74c3c';
                 
                 setTimeout(() => {
                     errorEl.style.display = 'none';
@@ -710,8 +723,8 @@
                 const errorEl = document.getElementById('errorMessage');
                 errorEl.textContent = message;
                 errorEl.style.display = 'block';
-                errorEl.style.color = '#00C851';
-                errorEl.style.borderColor = '#00C851';
+                errorEl.style.color = '#2ecc71';
+                errorEl.style.borderColor = '#2ecc71';
                 
                 setTimeout(() => {
                     errorEl.style.display = 'none';
@@ -721,7 +734,7 @@
 
         // Запускаем VPN
         document.addEventListener('DOMContentLoaded', () => {
-            window.vpn = new PotatoVPN();
+            window.vpn = new CactusVPN();
         });
     </script>
 </body>
