@@ -10,6 +10,10 @@
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         body {
@@ -27,8 +31,8 @@
             padding: 32px 24px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 0 2px #2b4b2b inset;
-            border: 1px solid #3f6e3f;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            border: 1px solid #2b4b2b;
             transition: all 0.3s ease;
         }
 
@@ -71,8 +75,6 @@
             padding: 20px;
             margin-bottom: 30px;
             border: 1px solid #3b6e3b;
-            box-shadow: inset 0 2px 5px #0a130a;
-            transition: all 0.3s ease;
         }
 
         .status-row {
@@ -95,8 +97,6 @@
             border-radius: 40px;
             background: #1f331f;
             color: #b0ffb0;
-            box-shadow: 0 0 8px #2e7d3240;
-            transition: all 0.3s ease;
         }
 
         .ip-block {
@@ -115,7 +115,7 @@
             margin: 6px 0;
         }
 
-        /* КРУГЛАЯ КНОПКА ПО ЦЕНТРУ */
+        /* КРУГЛАЯ 2D КНОПКА С КАКТУСАМИ */
         .power-button-container {
             display: flex;
             justify-content: center;
@@ -127,74 +127,50 @@
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
-            border: 4px solid #5a5a5a;
-            box-shadow: 0 10px 0 #2d2d2d, 0 0 20px rgba(0,0,0,0.5);
+            background: #2d3d2d;
+            border: 3px solid #4f7a4f;
             cursor: pointer;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.2s ease;
             color: white;
-            font-weight: bold;
-            font-size: 18px;
-            gap: 4px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .power-button::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 70%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .power-button:hover::before {
-            opacity: 1;
-        }
-
-        .power-button span {
-            font-size: 48px;
-            line-height: 1;
-            color: #cccccc;
-            text-shadow: 0 0 5px rgba(0,0,0,0.5);
-            transition: all 0.3s ease;
-            z-index: 2;
-        }
-
-        .power-button .power-text {
-            font-size: 14px;
-            letter-spacing: 2px;
-            color: #cccccc;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-            z-index: 2;
-        }
-
-        /* Включенное состояние (зеленое) */
-        .power-button.on {
-            background: linear-gradient(145deg, #1e8a1e, #0e5a0e);
-            border-color: #8eff8e;
-            box-shadow: 0 10px 0 #0e4a0e, 0 0 40px #00ff88;
-        }
-
-        .power-button.on span {
-            color: #ffffff;
-            text-shadow: 0 0 20px #ffffff;
-        }
-
-        .power-button.on .power-text {
-            color: #ffffff;
+            font-size: 70px;
+            outline: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
 
         .power-button:active {
-            transform: translateY(8px);
-            box-shadow: 0 2px 0 #2d2d2d, 0 0 40px #00ff88;
+            transform: scale(0.97);
+            background: #3a4f3a;
+        }
+
+        /* Включенное состояние - зеленый кактус */
+        .power-button.on {
+            background: #3b6e3b;
+            border-color: #8eff8e;
+            box-shadow: 0 4px 15px #00ff88;
+        }
+
+        .power-button.on:active {
+            background: #4f8a4f;
+        }
+
+        /* Убираем синее выделение */
+        .power-button:focus,
+        .power-button:focus-visible,
+        .power-button:focus-within {
+            outline: none;
+            box-shadow: none;
+        }
+
+        button, select, .test-btn {
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+        }
+
+        button:focus, select:focus {
+            outline: none;
         }
 
         /* Выпадающий список */
@@ -214,20 +190,18 @@
             font-weight: 600;
             appearance: none;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 0 #0e2b0e;
+            transition: all 0.2s ease;
+            outline: none;
         }
 
         .server-select:hover {
             background: #255025;
             border-color: #6fda6f;
-            box-shadow: 0 5px 0 #0e2b0e, 0 0 15px #50c850;
         }
 
         .server-select:focus {
             outline: none;
             border-color: #8eff8e;
-            box-shadow: 0 5px 0 #0e2b0e, 0 0 20px #00ff88;
         }
 
         .select-container::after {
@@ -239,11 +213,6 @@
             color: #8bc34a;
             font-size: 14px;
             pointer-events: none;
-            transition: transform 0.3s ease;
-        }
-
-        .select-container:hover::after {
-            transform: translateY(-50%) scale(1.2);
         }
 
         /* Метрики скорости */
@@ -253,7 +222,6 @@
             padding: 20px;
             margin: 25px 0;
             border: 1px solid #3b6e3b;
-            box-shadow: inset 0 2px 5px #0a130a;
         }
 
         .metric-item {
@@ -275,12 +243,11 @@
             font-weight: 700;
             font-size: 18px;
             color: #8eff8e;
-            transition: all 0.3s ease;
         }
 
         .progress-bar {
             width: 100%;
-            height: 8px;
+            height: 6px;
             background: #0f1f0f;
             border-radius: 10px;
             margin: 5px 0;
@@ -289,66 +256,39 @@
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #4caf50, #8eff8e);
+            background: #8eff8e;
             border-radius: 10px;
             width: 0%;
-            transition: width 0.5s ease;
-            box-shadow: 0 0 10px #00ff80;
+            transition: width 0.3s ease;
         }
 
-        /* Тестовые кнопки */
-        .test-section {
-            background: #1e2c1e;
-            border-radius: 40px;
-            padding: 18px;
-            margin-top: 20px;
-        }
-
-        .test-title {
-            color: #b0e0b0;
-            margin-bottom: 12px;
-            font-weight: 600;
-        }
-
-        .test-buttons {
+        /* Кнопка отключения */
+        .disconnect-btn {
+            width: 100%;
+            background: #3d1e1e;
+            border: 2px solid #b45f5f;
+            border-radius: 60px;
+            padding: 16px;
+            color: #ffb0b0;
+            font-weight: 700;
+            font-size: 20px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .test-btn {
-            background: #172317;
-            border: 1px solid #4b6e4b;
-            border-radius: 40px;
-            padding: 10px 18px;
-            color: #bddeb5;
-            font-size: 14px;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
             cursor: pointer;
-            flex: 1 0 auto;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            outline: none;
         }
 
-        .test-btn:hover {
-            background: #2a462a;
-            border-color: #96d696;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 10px rgba(0,255,0,0.2);
+        .disconnect-btn:active {
+            transform: scale(0.98);
+            background: #5c2e2e;
         }
 
-        .test-btn:active {
-            transform: translateY(2px);
-        }
-
-        #testResult {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 30px;
-            background: #0f190f;
-            color: #c6e6c6;
-            font-size: 14px;
-            border: 1px solid #527a52;
-            min-height: 20px;
-            transition: all 0.3s ease;
+        .disconnect-btn:focus {
+            outline: none;
         }
 
         .footer-note {
@@ -368,14 +308,9 @@
             animation: pulse 2s infinite;
         }
 
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .loading {
-            animation: spin 1s linear infinite;
-            display: inline-block;
+        /* Убираем выделение у всех элементов */
+        *:focus {
+            outline: none;
         }
     </style>
 </head>
@@ -402,12 +337,11 @@
             </div>
         </div>
 
-        <!-- КРУГЛАЯ КНОПКА ПО ЦЕНТРУ -->
+        <!-- КРУГЛАЯ 2D КНОПКА С КАКТУСАМИ -->
         <div class="power-button-container">
-            <div class="power-button" id="powerBtn" onclick="togglePower()">
-                <span>⏻</span>
-                <span class="power-text" id="powerText">ВЫКЛ</span>
-            </div>
+            <button class="power-button" id="powerBtn" onclick="togglePower()">
+                <span id="cactusIcon">🌵</span>
+            </button>
         </div>
 
         <!-- Выпадающий список серверов -->
@@ -450,18 +384,10 @@
             </div>
         </div>
 
-        <!-- Быстрая проверка сайтов -->
-        <div class="test-section">
-            <div class="test-title">⚡ Проверка доступа</div>
-            <div class="test-buttons">
-                <button class="test-btn" onclick="testSite('google.com')">Google</button>
-                <button class="test-btn" onclick="testSite('youtube.com')">YouTube</button>
-                <button class="test-btn" onclick="testSite('instagram.com')">Instagram</button>
-                <button class="test-btn" onclick="testSite('x.com')">X.com</button>
-                <button class="test-btn" onclick="testSite('discord.com')">Discord</button>
-            </div>
-            <div id="testResult">Нажми на кнопку, чтобы проверить</div>
-        </div>
+        <!-- Кнопка отключения -->
+        <button class="disconnect-btn" onclick="disconnectVPN()">
+            <span>⏻</span> ОТКЛЮЧИТЬСЯ
+        </button>
 
         <div class="footer-note">
             🌵 нажми на кактус — ключ 🔑 появится сверху
@@ -537,7 +463,7 @@ AllowedIPs = 0.0.0.0/0</pre>
         let speedInterval;
         let dataUsed = 0;
 
-        // Круглая кнопка включения/выключения
+        // Круглая кнопка с кактусами
         function togglePower() {
             if (isConnected) {
                 disconnectVPN();
@@ -551,7 +477,6 @@ AllowedIPs = 0.0.0.0/0</pre>
             const select = document.getElementById('serverSelect');
             currentServer = select.value;
             
-            // Если уже подключены, переподключаемся к новому серверу
             if (isConnected) {
                 connectVPN(currentServer);
             }
@@ -562,7 +487,6 @@ AllowedIPs = 0.0.0.0/0</pre>
             const server = servers[code];
             if (!server) return;
 
-            // Достаём конфиг
             const configElement = document.getElementById(server.confId);
             if (!configElement) {
                 alert('❌ Конфиг не найден! Замени данные в #conf_' + code);
@@ -575,15 +499,12 @@ AllowedIPs = 0.0.0.0/0</pre>
             document.getElementById('status').innerText = server.name;
             document.getElementById('status').style.color = '#b0ffb0';
             
-            // Включаем круглую кнопку (зеленая)
+            // Включаем зеленый кактус
             document.getElementById('powerBtn').classList.add('on');
-            document.getElementById('powerText').innerText = 'ВКЛ';
+            document.getElementById('cactusIcon').innerHTML = '🌵';
             isConnected = true;
 
-            // Показываем уведомление
-            showNotification(`🌵 Подключаемся к ${server.flag} ${server.name}...`);
-
-            // 1. Пробуем открыть WireGuard через deep link (ключ 🔑)
+            // 1. Пробуем открыть WireGuard через deep link
             window.location.href = 'wireguard://' + encodeURIComponent(config);
 
             // 2. Для Android
@@ -596,8 +517,6 @@ AllowedIPs = 0.0.0.0/0</pre>
                 link.href = URL.createObjectURL(blob);
                 link.download = `cactus-${code}.conf`;
                 link.click();
-
-                document.getElementById('status').innerText = `🔑 ${server.name}`;
             }, 800);
 
             // Запускаем симуляцию скорости
@@ -614,12 +533,11 @@ AllowedIPs = 0.0.0.0/0</pre>
             document.getElementById('status').innerText = 'Отключён';
             document.getElementById('status').style.color = '#ffb0b0';
             
-            // Выключаем круглую кнопку (серая)
+            // Серый кактус
             document.getElementById('powerBtn').classList.remove('on');
-            document.getElementById('powerText').innerText = 'ВЫКЛ';
+            document.getElementById('cactusIcon').innerHTML = '🌵';
             isConnected = false;
             
-            // Останавливаем симуляцию скорости
             stopSpeedSimulation();
             
             // Сбрасываем метрики
@@ -633,7 +551,7 @@ AllowedIPs = 0.0.0.0/0</pre>
             checkIP();
         }
 
-        // Симуляция скорости (для красоты)
+        // Симуляция скорости
         function startSpeedSimulation() {
             let download = 0;
             let upload = 0;
@@ -645,22 +563,18 @@ AllowedIPs = 0.0.0.0/0</pre>
             speedInterval = setInterval(() => {
                 if (!isConnected) return;
                 
-                // Случайные значения скорости
                 download = 15 + Math.random() * 35;
                 upload = 5 + Math.random() * 15;
                 ping = 20 + Math.random() * 30;
                 
-                // Обновляем данные
                 document.getElementById('downloadSpeed').innerText = download.toFixed(1) + ' Mbps';
                 document.getElementById('uploadSpeed').innerText = upload.toFixed(1) + ' Mbps';
                 document.getElementById('ping').innerText = Math.round(ping) + ' ms';
                 
-                // Прогресс-бары
                 document.getElementById('downloadProgress').style.width = (download / 50 * 100) + '%';
                 document.getElementById('uploadProgress').style.width = (upload / 25 * 100) + '%';
                 
-                // Считаем использованные данные
-                dataUsed += (download + upload) * 0.001; // примерно
+                dataUsed += (download + upload) * 0.001;
                 document.getElementById('dataUsed').innerText = dataUsed.toFixed(1) + ' MB';
                 localStorage.setItem('cactus_data', dataUsed);
                 
@@ -691,38 +605,10 @@ AllowedIPs = 0.0.0.0/0</pre>
                 });
         }
 
-        // Тест доступности сайта
-        function testSite(site) {
-            const resultDiv = document.getElementById('testResult');
-            resultDiv.innerHTML = `⏳ Проверяем ${site}...`;
-            resultDiv.style.color = '#b0e0b0';
-
-            fetch(`https://${site}`, { method: 'HEAD', mode: 'no-cors' })
-                .then(() => {
-                    resultDiv.innerHTML = `✅ ${site} — доступен`;
-                    resultDiv.style.color = '#a5d6a5';
-                })
-                .catch(() => {
-                    resultDiv.innerHTML = `❌ ${site} — нужен VPN`;
-                    resultDiv.style.color = '#ffaaaa';
-                });
-        }
-
-        // Уведомление
-        function showNotification(text) {
-            const resultDiv = document.getElementById('testResult');
-            resultDiv.innerHTML = text;
-            resultDiv.style.color = '#b0e0b0';
-            setTimeout(() => {
-                resultDiv.innerHTML = 'Нажми на кнопку, чтобы проверить';
-            }, 3000);
-        }
-
         // При загрузке
         window.onload = function() {
             checkIP();
             
-            // Восстанавливаем последний сервер
             const saved = localStorage.getItem('cactus_vpn');
             if (saved && servers[saved]) {
                 currentServer = saved;
@@ -730,13 +616,12 @@ AllowedIPs = 0.0.0.0/0</pre>
                 document.getElementById('status').innerText = `🔑 ${servers[saved].name}`;
             }
             
-            // Восстанавливаем данные
             dataUsed = parseFloat(localStorage.getItem('cactus_data')) || 0;
             document.getElementById('dataUsed').innerText = dataUsed.toFixed(1) + ' MB';
             
-            // Кнопка серая по умолчанию
+            // Серый кактус по умолчанию
             document.getElementById('powerBtn').classList.remove('on');
-            document.getElementById('powerText').innerText = 'ВЫКЛ';
+            document.getElementById('cactusIcon').innerHTML = '🌵';
         };
     </script>
 </body>
