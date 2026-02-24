@@ -23,12 +23,13 @@
 
         .card {
             background: #111913;
-            border-radius: 32px;
+            border-radius: 48px;
             padding: 32px 24px;
             width: 100%;
             max-width: 400px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 0 2px #2b4b2b inset;
             border: 1px solid #3f6e3f;
+            transition: all 0.3s ease;
         }
 
         /* Шапка */
@@ -42,6 +43,12 @@
         .cactus-icon {
             font-size: 40px;
             filter: drop-shadow(0 0 8px #6fda6f);
+            animation: float 3s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
         }
 
         .title h1 {
@@ -65,6 +72,7 @@
             margin-bottom: 30px;
             border: 1px solid #3b6e3b;
             box-shadow: inset 0 2px 5px #0a130a;
+            transition: all 0.3s ease;
         }
 
         .status-row {
@@ -88,6 +96,7 @@
             background: #1f331f;
             color: #b0ffb0;
             box-shadow: 0 0 8px #2e7d3240;
+            transition: all 0.3s ease;
         }
 
         .ip-block {
@@ -106,71 +115,185 @@
             margin: 6px 0;
         }
 
-        /* Кнопки серверов */
-        .server-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin: 28px 0;
+        /* КРУГЛАЯ КНОПКА ПО ЦЕНТРУ */
+        .power-button-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px 0;
         }
 
-        .server-btn {
-            background: #1c2c1c;
-            border: 2px solid #2f582f;
-            border-radius: 60px;
-            padding: 16px 8px;
-            color: #dcffdc;
-            font-weight: 600;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: 0.2s;
+        .power-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+            border: 4px solid #5a5a5a;
+            box-shadow: 0 10px 0 #2d2d2d, 0 0 20px rgba(0,0,0,0.5);
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            gap: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .power-button::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .power-button:hover::before {
+            opacity: 1;
+        }
+
+        .power-button span {
+            font-size: 48px;
+            line-height: 1;
+            color: #cccccc;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .power-button .power-text {
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: #cccccc;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        /* Включенное состояние (зеленое) */
+        .power-button.on {
+            background: linear-gradient(145deg, #1e8a1e, #0e5a0e);
+            border-color: #8eff8e;
+            box-shadow: 0 10px 0 #0e4a0e, 0 0 40px #00ff88;
+        }
+
+        .power-button.on span {
+            color: #ffffff;
+            text-shadow: 0 0 20px #ffffff;
+        }
+
+        .power-button.on .power-text {
+            color: #ffffff;
+        }
+
+        .power-button:active {
+            transform: translateY(8px);
+            box-shadow: 0 2px 0 #2d2d2d, 0 0 40px #00ff88;
+        }
+
+        /* Выпадающий список */
+        .select-container {
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .server-select {
+            width: 100%;
+            padding: 16px 24px;
+            background: #1c2c1c;
+            border: 2px solid #3a6e3a;
+            border-radius: 60px;
+            color: #dcffdc;
+            font-size: 18px;
+            font-weight: 600;
+            appearance: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
             box-shadow: 0 5px 0 #0e2b0e;
         }
 
-        .server-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 1px 0 #0e2b0e;
-        }
-
-        .server-btn:hover {
+        .server-select:hover {
             background: #255025;
             border-color: #6fda6f;
-            box-shadow: 0 0 15px #50c850;
+            box-shadow: 0 5px 0 #0e2b0e, 0 0 15px #50c850;
         }
 
-        /* Кнопка отключения */
-        .disconnect-btn {
-            width: 100%;
-            background: #3d1e1e;
-            border: 2px solid #b45f5f;
-            border-radius: 60px;
-            padding: 16px;
-            color: #ffb0b0;
-            font-weight: 700;
-            font-size: 20px;
+        .server-select:focus {
+            outline: none;
+            border-color: #8eff8e;
+            box-shadow: 0 5px 0 #0e2b0e, 0 0 20px #00ff88;
+        }
+
+        .select-container::after {
+            content: '▼';
+            position: absolute;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8bc34a;
+            font-size: 14px;
+            pointer-events: none;
+            transition: transform 0.3s ease;
+        }
+
+        .select-container:hover::after {
+            transform: translateY(-50%) scale(1.2);
+        }
+
+        /* Метрики скорости */
+        .metrics-container {
+            background: #1a261a;
+            border-radius: 40px;
+            padding: 20px;
+            margin: 25px 0;
+            border: 1px solid #3b6e3b;
+            box-shadow: inset 0 2px 5px #0a130a;
+        }
+
+        .metric-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 24px;
-            cursor: pointer;
-            transition: 0.2s;
-            box-shadow: 0 5px 0 #4a2b2b;
+            justify-content: space-between;
+            margin: 12px 0;
+            color: #b0e0b0;
         }
 
-        .disconnect-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 1px 0 #4a2b2b;
+        .metric-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
         }
 
-        .disconnect-btn:hover {
-            background: #5c2e2e;
-            border-color: #ff8a8a;
-            color: #ffe0e0;
+        .metric-value {
+            font-weight: 700;
+            font-size: 18px;
+            color: #8eff8e;
+            transition: all 0.3s ease;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #0f1f0f;
+            border-radius: 10px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8eff8e);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px #00ff80;
         }
 
         /* Тестовые кнопки */
@@ -178,6 +301,7 @@
             background: #1e2c1e;
             border-radius: 40px;
             padding: 18px;
+            margin-top: 20px;
         }
 
         .test-title {
@@ -201,12 +325,18 @@
             font-size: 14px;
             cursor: pointer;
             flex: 1 0 auto;
-            transition: 0.2s;
+            transition: all 0.3s ease;
         }
 
         .test-btn:hover {
             background: #2a462a;
             border-color: #96d696;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,255,0,0.2);
+        }
+
+        .test-btn:active {
+            transform: translateY(2px);
         }
 
         #testResult {
@@ -218,6 +348,7 @@
             font-size: 14px;
             border: 1px solid #527a52;
             min-height: 20px;
+            transition: all 0.3s ease;
         }
 
         .footer-note {
@@ -225,6 +356,26 @@
             color: #467446;
             font-size: 12px;
             margin-top: 16px;
+        }
+
+        /* Анимации */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+            display: inline-block;
         }
     </style>
 </head>
@@ -251,18 +402,53 @@
             </div>
         </div>
 
-        <!-- Кнопки серверов (зеленые, сочные) -->
-        <div class="server-grid">
-            <button class="server-btn" onclick="connectVPN('nl')">🇳🇱 NL</button>
-            <button class="server-btn" onclick="connectVPN('de')">🇩🇪 DE</button>
-            <button class="server-btn" onclick="connectVPN('fi')">🇫🇮 FI</button>
-            <button class="server-btn" onclick="connectVPN('us')">🇺🇸 US</button>
+        <!-- КРУГЛАЯ КНОПКА ПО ЦЕНТРУ -->
+        <div class="power-button-container">
+            <div class="power-button" id="powerBtn" onclick="togglePower()">
+                <span>⏻</span>
+                <span class="power-text" id="powerText">ВЫКЛ</span>
+            </div>
         </div>
 
-        <!-- Кнопка отключения (красноватая, но в тему) -->
-        <button class="disconnect-btn" onclick="disconnectVPN()">
-            <span>⏻</span> ОТКЛЮЧИТЬСЯ
-        </button>
+        <!-- Выпадающий список серверов -->
+        <div class="select-container">
+            <select class="server-select" id="serverSelect" onchange="changeServer()">
+                <option value="nl">🇳🇱 Нидерланды (Амстердам)</option>
+                <option value="de">🇩🇪 Германия (Франкфурт)</option>
+                <option value="fi">🇫🇮 Финляндия (Хельсинки)</option>
+                <option value="us">🇺🇸 США (Нью-Йорк)</option>
+                <option value="gb">🇬🇧 Великобритания (Лондон)</option>
+            </select>
+        </div>
+
+        <!-- Метрики скорости -->
+        <div class="metrics-container">
+            <div class="metric-item">
+                <span class="metric-label">📥 Загрузка</span>
+                <span class="metric-value" id="downloadSpeed">0 Mbps</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="downloadProgress" style="width: 0%"></div>
+            </div>
+            
+            <div class="metric-item">
+                <span class="metric-label">📤 Отдача</span>
+                <span class="metric-value" id="uploadSpeed">0 Mbps</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="uploadProgress" style="width: 0%"></div>
+            </div>
+            
+            <div class="metric-item">
+                <span class="metric-label">⚡ Пинг</span>
+                <span class="metric-value" id="ping">0 ms</span>
+            </div>
+            
+            <div class="metric-item">
+                <span class="metric-label">📊 Использовано</span>
+                <span class="metric-value" id="dataUsed">0 MB</span>
+            </div>
+        </div>
 
         <!-- Быстрая проверка сайтов -->
         <div class="test-section">
@@ -272,16 +458,17 @@
                 <button class="test-btn" onclick="testSite('youtube.com')">YouTube</button>
                 <button class="test-btn" onclick="testSite('instagram.com')">Instagram</button>
                 <button class="test-btn" onclick="testSite('x.com')">X.com</button>
+                <button class="test-btn" onclick="testSite('discord.com')">Discord</button>
             </div>
             <div id="testResult">Нажми на кнопку, чтобы проверить</div>
         </div>
 
         <div class="footer-note">
-            🌵 жми — ключ появится сверху
+            🌵 нажми на кактус — ключ 🔑 появится сверху
         </div>
     </div>
 
-    <!-- Скрытые конфиги WireGuard (заполни своими из Telegram) -->
+    <!-- Скрытые конфиги WireGuard (ЗАМЕНИ НА СВОИ ИЗ TELEGRAM) -->
     <div style="display: none;">
         <pre id="conf_nl">[Interface]
 PrivateKey = eHl6MTIzNDU2Nzg5MGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6
@@ -322,45 +509,87 @@ DNS = 1.1.1.1
 PublicKey = ZXhhbXBsZXB1YmxpY2tleWZvcnBlZXIxMjM0NTY3ODkw
 Endpoint = us.cactusvpn.ru:51820
 AllowedIPs = 0.0.0.0/0</pre>
+
+        <pre id="conf_gb">[Interface]
+PrivateKey = Z2IxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=
+Address = 10.0.0.6/24
+DNS = 1.1.1.1
+
+[Peer]
+PublicKey = ZXhhbXBsZXB1YmxpY2tleWZvcnBlZXIxMjM0NTY3ODkw
+Endpoint = gb.cactusvpn.ru:51820
+AllowedIPs = 0.0.0.0/0</pre>
     </div>
 
     <script>
-        // Твои рабочие конфиги из Telegram-каналов (замени на реальные)
+        // Конфиги серверов
         const servers = {
-            'nl': { name: 'Нидерланды', confId: 'conf_nl' },
-            'de': { name: 'Германия', confId: 'conf_de' },
-            'fi': { name: 'Финляндия', confId: 'conf_fi' },
-            'us': { name: 'США', confId: 'conf_us' }
+            'nl': { name: 'Нидерланды', confId: 'conf_nl', flag: '🇳🇱' },
+            'de': { name: 'Германия', confId: 'conf_de', flag: '🇩🇪' },
+            'fi': { name: 'Финляндия', confId: 'conf_fi', flag: '🇫🇮' },
+            'us': { name: 'США', confId: 'conf_us', flag: '🇺🇸' },
+            'gb': { name: 'Великобритания', confId: 'conf_gb', flag: '🇬🇧' }
         };
 
         // Состояние
-        let currentServer = null;
+        let isConnected = false;
+        let currentServer = 'nl';
+        let speedInterval;
+        let dataUsed = 0;
 
-        // Подключение к VPN (появляется значок 🔑)
+        // Круглая кнопка включения/выключения
+        function togglePower() {
+            if (isConnected) {
+                disconnectVPN();
+            } else {
+                connectVPN(currentServer);
+            }
+        }
+
+        // Смена сервера
+        function changeServer() {
+            const select = document.getElementById('serverSelect');
+            currentServer = select.value;
+            
+            // Если уже подключены, переподключаемся к новому серверу
+            if (isConnected) {
+                connectVPN(currentServer);
+            }
+        }
+
+        // Подключение к VPN
         function connectVPN(code) {
             const server = servers[code];
             if (!server) return;
 
-            // Достаём конфиг из скрытого блока
+            // Достаём конфиг
             const configElement = document.getElementById(server.confId);
             if (!configElement) {
-                alert('❌ Конфиг не найден. Добавь свои данные в #conf_' + code);
+                alert('❌ Конфиг не найден! Замени данные в #conf_' + code);
                 return;
             }
 
             const config = configElement.textContent.trim();
 
             // Меняем интерфейс
-            document.getElementById('status').innerText = 'Подключение...';
+            document.getElementById('status').innerText = server.name;
             document.getElementById('status').style.color = '#b0ffb0';
+            
+            // Включаем круглую кнопку (зеленая)
+            document.getElementById('powerBtn').classList.add('on');
+            document.getElementById('powerText').innerText = 'ВКЛ';
+            isConnected = true;
 
-            // 1. Пробуем открыть WireGuard через deep link (появляется ключ!)
+            // Показываем уведомление
+            showNotification(`🌵 Подключаемся к ${server.flag} ${server.name}...`);
+
+            // 1. Пробуем открыть WireGuard через deep link (ключ 🔑)
             window.location.href = 'wireguard://' + encodeURIComponent(config);
 
-            // 2. Для Android — intent
+            // 2. Для Android
             window.location.href = 'intent://' + encodeURIComponent(config) + '#Intent;package=com.wireguard.android;end';
 
-            // 3. Запасной вариант — сохранить в файл
+            // 3. Сохраняем файл как запасной вариант
             setTimeout(() => {
                 const blob = new Blob([config], { type: 'application/x-wireguard-config' });
                 const link = document.createElement('a');
@@ -368,24 +597,80 @@ AllowedIPs = 0.0.0.0/0</pre>
                 link.download = `cactus-${code}.conf`;
                 link.click();
 
-                document.getElementById('status').innerText = `⬇️ Конфиг ${server.name} сохранён`;
+                document.getElementById('status').innerText = `🔑 ${server.name}`;
             }, 800);
 
-            // Обновляем статус
-            currentServer = code;
-            document.getElementById('status').innerText = `🔑 ${server.name}`;
+            // Запускаем симуляцию скорости
+            startSpeedSimulation();
+            
             localStorage.setItem('cactus_vpn', code);
             checkIP();
         }
 
-        // Отключение (просто открываем WireGuard для ручного отключения)
+        // Отключение
         function disconnectVPN() {
             window.location.href = 'wireguard://';
+            
             document.getElementById('status').innerText = 'Отключён';
             document.getElementById('status').style.color = '#ffb0b0';
-            currentServer = null;
+            
+            // Выключаем круглую кнопку (серая)
+            document.getElementById('powerBtn').classList.remove('on');
+            document.getElementById('powerText').innerText = 'ВЫКЛ';
+            isConnected = false;
+            
+            // Останавливаем симуляцию скорости
+            stopSpeedSimulation();
+            
+            // Сбрасываем метрики
+            document.getElementById('downloadSpeed').innerText = '0 Mbps';
+            document.getElementById('uploadSpeed').innerText = '0 Mbps';
+            document.getElementById('ping').innerText = '0 ms';
+            document.getElementById('downloadProgress').style.width = '0%';
+            document.getElementById('uploadProgress').style.width = '0%';
+            
             localStorage.removeItem('cactus_vpn');
             checkIP();
+        }
+
+        // Симуляция скорости (для красоты)
+        function startSpeedSimulation() {
+            let download = 0;
+            let upload = 0;
+            let ping = 20;
+            dataUsed = parseFloat(localStorage.getItem('cactus_data')) || 0;
+            
+            document.getElementById('dataUsed').innerText = dataUsed.toFixed(1) + ' MB';
+            
+            speedInterval = setInterval(() => {
+                if (!isConnected) return;
+                
+                // Случайные значения скорости
+                download = 15 + Math.random() * 35;
+                upload = 5 + Math.random() * 15;
+                ping = 20 + Math.random() * 30;
+                
+                // Обновляем данные
+                document.getElementById('downloadSpeed').innerText = download.toFixed(1) + ' Mbps';
+                document.getElementById('uploadSpeed').innerText = upload.toFixed(1) + ' Mbps';
+                document.getElementById('ping').innerText = Math.round(ping) + ' ms';
+                
+                // Прогресс-бары
+                document.getElementById('downloadProgress').style.width = (download / 50 * 100) + '%';
+                document.getElementById('uploadProgress').style.width = (upload / 25 * 100) + '%';
+                
+                // Считаем использованные данные
+                dataUsed += (download + upload) * 0.001; // примерно
+                document.getElementById('dataUsed').innerText = dataUsed.toFixed(1) + ' MB';
+                localStorage.setItem('cactus_data', dataUsed);
+                
+            }, 2000);
+        }
+
+        function stopSpeedSimulation() {
+            if (speedInterval) {
+                clearInterval(speedInterval);
+            }
         }
 
         // Проверка IP
@@ -423,13 +708,35 @@ AllowedIPs = 0.0.0.0/0</pre>
                 });
         }
 
+        // Уведомление
+        function showNotification(text) {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = text;
+            resultDiv.style.color = '#b0e0b0';
+            setTimeout(() => {
+                resultDiv.innerHTML = 'Нажми на кнопку, чтобы проверить';
+            }, 3000);
+        }
+
         // При загрузке
         window.onload = function() {
             checkIP();
+            
+            // Восстанавливаем последний сервер
             const saved = localStorage.getItem('cactus_vpn');
             if (saved && servers[saved]) {
-                document.getElementById('status').innerText = `🔑 ${servers[saved].name} (последний)`;
+                currentServer = saved;
+                document.getElementById('serverSelect').value = saved;
+                document.getElementById('status').innerText = `🔑 ${servers[saved].name}`;
             }
+            
+            // Восстанавливаем данные
+            dataUsed = parseFloat(localStorage.getItem('cactus_data')) || 0;
+            document.getElementById('dataUsed').innerText = dataUsed.toFixed(1) + ' MB';
+            
+            // Кнопка серая по умолчанию
+            document.getElementById('powerBtn').classList.remove('on');
+            document.getElementById('powerText').innerText = 'ВЫКЛ';
         };
     </script>
 </body>
